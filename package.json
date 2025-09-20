@@ -17,7 +17,8 @@
       "dev:backend": "nodemon run.js",
       "dev:watch": "node --watch run.js",
       "format": "prettier --write .",
-      "format:check": "prettier --check ."
+      "format:check": "prettier --check .",
+      "bootstrap:update": "cp node_modules/bootstrap/dist/css/bootstrap.min.css* src/frontend/static/vendor/bootstrap/ && cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* src/frontend/static/vendor/bootstrap/"
    },
    "jest": {
       "testEnvironment": "node",
@@ -26,6 +27,7 @@
    "author": "",
    "license": "ISC",
    "dependencies": {
+      "bootstrap": "^5.3.8",
       "cors": "^2.8.5",
       "express": "^5.1.0"
    },

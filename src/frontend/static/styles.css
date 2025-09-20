@@ -1,3 +1,36 @@
 body {
-    background-color: blue;
+   background-color: blue;
+}
+
+.container-fluid {
+   padding: 0px;
+}
+
+.sidebar {
+   background-color: pink;
+}
+
+.main {
+   background-color: yellow;
+   width: 100%;
+   display: flex;
+   overflow:scroll;
+}
+
+.timeline {
+   background-color: lightgray;
+   display: flex;
+   
+}
+
+.video-container {
+   background-color: green;
+   padding: 0px;
+   width: 300px;
+   height: 100%;
+   
+}
+.video-container:hover {
+   background-color: darkgreen;
+   cursor: pointer;
 }

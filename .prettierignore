@@ -8,3 +8,4 @@ package-lock.json
 var/
 database.json
 *.log
+src/frontend/static/vendor/
