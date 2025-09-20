@@ -1,0 +1,22 @@
+{
+  "watch": [
+    "run.js",
+    "src/backend/"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules/",
+    "database.json",
+    "*.test.js",
+    "src/**/*.test.js",
+    "src/**/__tests__/",
+    "coverage/",
+    "var/"
+  ],
+  "delay": 1000,
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "verbose": true,
+  "exec": "node run.js"
+}
