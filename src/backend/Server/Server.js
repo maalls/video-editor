@@ -42,6 +42,7 @@ export default class Server {
 
         // API Routes
         app.get('/', (req, res) => {
+            console.log("sending.")
             res.sendFile(path.join(__dirname, './../../', 'frontend', 'index.html'));
         });
         

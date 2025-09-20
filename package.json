@@ -13,9 +13,8 @@
     "test:jest": "node --experimental-vm-modules node_modules/.bin/jest",
     "start": "node run.js",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "nodemon run.js",
     "dev:frontend": "browser-sync start --config bs-config.json",
-    "dev:backend-only": "nodemon run.js",
+    "dev:backend": "nodemon run.js",
     "dev:watch": "node --watch run.js"
   },
   "jest": {
