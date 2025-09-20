@@ -42,31 +42,28 @@ export default class Server {
 
         // API Routes
         app.get('/', (req, res) => {
-            console.log("sending.")
+            
             res.sendFile(path.join(__dirname, './../../', 'frontend', 'index.html'));
         });
         
             
+
+
+        app.get("/project", (req, res) => {
+
+            const videos = this.videoDatabase.values();
+            const project = {
+                videos: 'videos'
+            }
+            return json(project);
+        });
         /**
          * GET /videos - List all available videos
          */
         app.get('/videos', (req, res) => {
-            const videos = Array.from(this.videoDatabase.values()).map(video => ({
-                id: video.id,
-                filename: video.filename,
-                duration: video.duration,
-                fileSize: video.fileSize,
-                video: video.video ? {
-                    width: video.video.width,
-                    height: video.video.height,
-                    codec: video.video.codec
-                } : null
-            }));
+            const videos = this.videoDatabase.values();
 
-            res.json({
-                count: videos.length,
-                videos: videos
-            });
+            res.json(videos);
         });
 
         /**
