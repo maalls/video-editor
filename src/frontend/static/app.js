@@ -39,7 +39,7 @@ class VideoLibraryApp {
    async start() {
       // Create Bootstrap header
       const header = this.uiBuilder.createTag('header');
-      header.className = 'bg-primary text-white py-4 mb-4';
+      header.className = 'bg-primary text-center pd-2';
       header.innerHTML = `AI Vids Editor`;
 
       this.app = {
@@ -120,7 +120,7 @@ class VideoLibraryApp {
    }
 
    async loadEditor() {
-      const ratio = 16 / 9;
+      const ratio = 1920 / 1080;
       const width = 300;
       const height = width / ratio;
       const dom = this.dom('main');

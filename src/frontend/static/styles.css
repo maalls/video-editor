@@ -1,3 +1,7 @@
+.bg-primary {
+   background-color: darkgray !important;
+}
+
 body {
    background-color: blue;
 }
