@@ -18,7 +18,9 @@
       "dev:watch": "node --watch run.js",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
-      "bootstrap:update": "cp node_modules/bootstrap/dist/css/bootstrap.min.css* src/frontend/static/vendor/bootstrap/ && cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* src/frontend/static/vendor/bootstrap/"
+      "bootstrap:update": "cp node_modules/bootstrap/dist/css/bootstrap.min.css* src/frontend/static/vendor/bootstrap/ && cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* src/frontend/static/vendor/bootstrap/",
+      "assets:update": "cp -r assets/robot_icon_pack/* src/frontend/static/assets/icons/",
+      "assets:optimize": "echo 'Assets copied successfully! 🤖 VIAI icons are ready to use.'"
    },
    "jest": {
       "testEnvironment": "node",

@@ -9,6 +9,25 @@ class VideoLibraryApp {
       this.isLoading = false;
       this.uiBuilder = new UiBuilder();
 
+      this.configuration = {
+         timeline: {
+            height: 100,
+         },
+         assets: {
+            iconPath: 'static/assets/icons/',
+            robotIcon: {
+               svg: 'robot_icon.svg',
+               sizes: {
+                  16: 'robot_icon_16x16.png',
+                  32: 'robot_icon_32x32.png',
+                  64: 'robot_icon_64x64.png',
+                  128: 'robot_icon_128x128.png',
+                  512: 'robot_icon_512x512.png',
+               },
+            },
+         },
+      };
+
       // Log environment info
       console.log('🌍 Environment:', {
          userAgent: navigator.userAgent,
@@ -37,10 +56,16 @@ class VideoLibraryApp {
    }
 
    async start() {
-      // Create Bootstrap header
+      // Create Bootstrap header with robot logo
       const header = this.uiBuilder.createTag('header');
-      header.className = 'bg-primary text-center pd-2';
-      header.innerHTML = `Video Editor - AI Interface`;
+      header.className = 'bg-primary text-white text-center';
+      header.innerHTML = `
+         <div class="container-fluid d-flex justify-content-end pe-1">
+            <div>
+               <small class="opacity-75">Video Editor AI Interface</small>
+            </div>
+         </div>
+      `;
 
       this.app = {
          element: this.uiBuilder.container,
@@ -48,8 +73,13 @@ class VideoLibraryApp {
             header: {
                element: header,
             },
-            display: {
-               element: this.uiBuilder.createTag('div', null, 'display'),
+            top: {
+               element: this.uiBuilder.createTag('div', null, 'top'),
+               childrens: {
+                  display: {
+                     element: this.uiBuilder.createTag('div', null, 'display'),
+                  },
+               },
             },
             main: {
                element: this.uiBuilder.createTag('div', null, 'main'),
@@ -58,7 +88,6 @@ class VideoLibraryApp {
       };
 
       let context = this.uiBuilder.container;
-
       this.addElements(this.app);
 
       try {
@@ -109,7 +138,8 @@ class VideoLibraryApp {
       console.log('app view created');
    }
 
-   addElements({ element, childrens }, parentDom) {
+   addElements({ parentId, element, childrens }, parentDom) {
+      element = element || this.uiBuilder.createTag('div', null, parentId);
       parentDom = parentDom ? parentDom : document.body;
       console.log('append', element, 'to', parentDom);
       parentDom.append(element);
@@ -132,51 +162,48 @@ class VideoLibraryApp {
 
    async loadEditor() {
       const ratio = 1920 / 1080;
-      const width = 300;
-      const height = width / ratio;
+      const height = this.configuration.timeline.height;
+      const width = height * ratio;
       const dom = this.dom('main');
       for (const video of this.project.dailies) {
          // Create enhanced video player UI
          console.log('Creating video player for:', video.filename);
 
-         const videoContainer = this.uiBuilder.createTag('div', '', 'video-container');
-         videoContainer.setAttribute('style', `width: ${width}px; height: ${height + 150}px;`);
-         /*const videoTag = this.uiBuilder.createTag('video', '', 'video');
-         videoTag.setAttribute('id', `video-player-${video.filename}`);
-         videoTag.setAttribute('class', 'video');
-         videoTag.setAttribute('controls', '');
-         videoTag.setAttribute('preload', 'none');
-         videoTag.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
+         const videoContainer = this.uiBuilder.createTag(
+            'div',
+            '',
+            'video-container position-relative'
+         );
+         videoContainer.setAttribute('style', `width: ${width}px;`);
 
-         const source = this.uiBuilder.createTag('source', '', 'video-source');
-         source.setAttribute('src', `/video/${video.filename}/stream`);
-         source.setAttribute('type', 'video/mp4');
-         videoTag.append(source);
-
-         videoContainer.append(videoTag);*/
+         // Add robot icon overlay for AI processing indicator
+         const robotOverlay = this.uiBuilder.createTag(
+            'div',
+            '',
+            'position-absolute top-0 end-0 p-1'
+         );
+         const smallRobotIcon = this.createRobotIcon(16, 'opacity-75');
+         robotOverlay.append(smallRobotIcon);
 
          const imageTag = this.uiBuilder.createTag('img');
          imageTag.src = 'work/thumbnails/' + video.filename.replace('.MP4', '.jpg');
          imageTag.setAttribute(
             'style',
-            `width: ${width}px; height: ${height}px; background: yellow;`
+            `width: ${width}px; height: ${height}px; background: linear-gradient(45deg, #f0f0f0, #e0e0e0);`
          );
 
          imageTag.addEventListener('click', event => {
-            console.log('click', video.filename, imageTag.src);
+            console.log('🤖 AI Processing:', video.filename, imageTag.src);
             this.displayClip(video);
          });
 
-         videoContainer.append(imageTag);
+         videoContainer.append(imageTag, robotOverlay);
 
-         const videoInfo = this.uiBuilder.createTag('div', '', 'video-info');
+         /*const videoInfo = this.uiBuilder.createTag('div', '', 'video-info');
          videoInfo.innerHTML = `
-            <h5>${video.filename}</h5>
-            <p>Created at: ${new Date(video.created_at).toLocaleString()}</p>
-            <p>${video.info.ffprob.video.width}x${video.info.ffprob.video.height}, FPS: ${eval(video.info.ffprob.video.avg_frame_rate).toFixed(2)}</p>
-            <p>Duration: ${parseFloat(video.info.ffprob.video.duration).toFixed(2)} seconds</p>
+            <div>${video.filename}</div>
             `;
-         videoContainer.append(videoInfo);
+         videoContainer.append(videoInfo);*/
 
          dom.element.append(videoContainer);
 
@@ -186,10 +213,10 @@ class VideoLibraryApp {
 
    displayClip(video, start = true) {
       const ratio = 1920 / 1080;
-      const width = 300;
-      const height = width / ratio;
+      const height = 300;
+      const width = height * ratio;
 
-      const display = this.app.childrens.display.element;
+      const display = this.app.childrens.top.childrens.display.element;
       const videoTag = this.uiBuilder.createTag('video', '', 'video');
       videoTag.setAttribute('id', `video-player-${video.filename}`);
       videoTag.setAttribute('class', 'video');
@@ -269,6 +296,51 @@ class VideoLibraryApp {
 
       // Load and display the video
       this.showVideoDetails(video.filename);
+   }
+
+   /**
+    * Helper method to create robot icons
+    * @param {number} size - Icon size (16, 32, 64, 128, 512)
+    * @param {string} className - Additional CSS classes
+    * @param {string} alt - Alt text for accessibility
+    * @returns {HTMLImageElement} - Robot icon element
+    */
+   createRobotIcon(size = 32, className = '', alt = 'VIAI Robot') {
+      const icon = this.uiBuilder.createTag('img');
+      const iconConfig = this.configuration.assets.robotIcon;
+
+      if (iconConfig.sizes[size]) {
+         icon.src = this.configuration.assets.iconPath + iconConfig.sizes[size];
+      } else {
+         // Fallback to SVG for custom sizes
+         icon.src = this.configuration.assets.iconPath + iconConfig.svg;
+         icon.style.width = `${size}px`;
+         icon.style.height = `${size}px`;
+      }
+
+      icon.alt = alt;
+      icon.className = `robot-icon ${className}`;
+
+      return icon;
+   }
+
+   /**
+    * Create a branded button with robot icon
+    * @param {string} text - Button text
+    * @param {string} className - Bootstrap button classes
+    * @param {number} iconSize - Icon size
+    * @returns {HTMLButtonElement} - Branded button
+    */
+   createRobotButton(text, className = 'btn-primary', iconSize = 16) {
+      const button = this.uiBuilder.createTag('button');
+      button.className = `btn ${className} d-flex align-items-center gap-2`;
+
+      const icon = this.createRobotIcon(iconSize, '', 'VIAI');
+      const textSpan = this.uiBuilder.createTag('span');
+      textSpan.textContent = text;
+
+      button.append(icon, textSpan);
+      return button;
    }
 }
 const app = new VideoLibraryApp();

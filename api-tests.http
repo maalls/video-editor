@@ -1,0 +1,42 @@
+### Test du serveur local
+GET http://localhost:3003
+
+### Test de streaming vidéo - Premiers 1024 octets (1 KB)
+GET http://localhost:3003/video/1/stream
+Range: bytes=0-1023
+
+### Test de streaming vidéo - Les 1024 octets suivants
+GET http://localhost:3003/video/1/stream
+Range: bytes=1024-2047
+
+### Test de streaming vidéo - Derniers 1024 octets
+GET http://localhost:3003/video/1/stream
+Range: bytes=-1024
+
+### Test de streaming vidéo - À partir de l'octet 1000000 jusqu'à la fin
+GET http://localhost:3003/video/1/stream
+Range: bytes=1000000-
+
+### Test de streaming vidéo - Plages multiples
+GET http://localhost:3003/video/1/stream
+Range: bytes=0-1023, 2048-3071
+
+### Test avec headers personnalisés
+GET http://localhost:3003/video/2/stream
+Accept: video/mp4
+User-Agent: VideoEditor-Test
+
+### Variables d'environnement
+@baseUrl = http://localhost:3003
+@videoId = 1
+
+GET {{baseUrl}}/video/{{videoId}}/stream
+
+### Test POST (si vous ajoutez des endpoints)
+POST {{baseUrl}}/api/upload
+Content-Type: application/json
+
+{
+  "filename": "test-video.mp4",
+  "size": 1024000
+}

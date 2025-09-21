@@ -18,13 +18,12 @@ body {
    background-color: yellow;
    width: 100%;
    display: flex;
-   overflow:scroll;
+   overflow: scroll;
 }
 
 .timeline {
    background-color: lightgray;
    display: flex;
-   
 }
 
 .video-container {
@@ -34,9 +33,50 @@ body {
    padding: 0px;
    width: 300px;
    height: 100%;
-   
 }
 .video-container:hover {
    background-color: darkgreen;
    cursor: pointer;
+}
+
+/* Header and Logo Styles */
+header .container-fluid h1 {
+   font-weight: bold;
+   letter-spacing: 1px;
+}
+
+header img {
+   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+   transition: transform 0.3s ease;
+}
+
+header img:hover {
+   transform: scale(1.1);
+}
+
+/* Icon utilities */
+.icon-sm {
+   width: 16px;
+   height: 16px;
+}
+.icon-md {
+   width: 32px;
+   height: 32px;
+}
+.icon-lg {
+   width: 48px;
+   height: 48px;
+}
+.icon-xl {
+   width: 64px;
+   height: 64px;
+}
+
+/* Robot theme colors */
+:root {
+   --robot-primary: #2563eb;
+   --robot-secondary: #64748b;
+   --robot-accent: #10b981;
+   --robot-warning: #f59e0b;
+   --robot-danger: #ef4444;
 }
