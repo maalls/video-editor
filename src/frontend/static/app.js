@@ -325,27 +325,67 @@ class VideoLibraryApp {
       setTimeout(() => {
          const videoElement = document.querySelector(`#video-player-${video.filename}`);
          if (videoElement) {
-            const seekAndPlay = () => {
+            const seekAndPlay = async () => {
                const targetTime = progress * videoElement.duration;
+               console.log(`Seeking to ${targetTime.toFixed(2)}s in ${video.filename}`);
+               
                videoElement.currentTime = targetTime;
                
-               // Auto-play the video after seeking
-               videoElement.play().then(() => {
-                  console.log(`Playing ${video.filename} from ${targetTime.toFixed(2)}s`);
-               }).catch(error => {
-                  console.log('Auto-play prevented by browser policy:', error);
-                  console.log('Click the play button to start playback');
-               });
+               // Force play immediately after seek - the click should allow this
+               setTimeout(async () => {
+                  try {
+                     console.log(`🎬 Attempting to play ${video.filename}...`);
+                     const playPromise = videoElement.play();
+                     
+                     if (playPromise !== undefined) {
+                        await playPromise;
+                        console.log(`✅ Successfully playing ${video.filename} from ${targetTime.toFixed(2)}s`);
+                     }
+                  } catch (error) {
+                     console.log('❌ Auto-play blocked by browser policy:', error.message);
+                     console.log('💡 Try clicking directly on the video to start playback');
+                     
+                     // Add a play button overlay if auto-play fails
+                     const playButton = document.createElement('div');
+                     playButton.innerHTML = '▶️ Click to Play';
+                     playButton.style.cssText = `
+                        position: absolute; 
+                        top: 50%; 
+                        left: 50%; 
+                        transform: translate(-50%, -50%);
+                        background: rgba(0,0,0,0.8); 
+                        color: white; 
+                        padding: 10px; 
+                        border-radius: 5px;
+                        cursor: pointer;
+                        z-index: 1000;
+                     `;
+                     
+                     playButton.onclick = () => {
+                        videoElement.play();
+                        playButton.remove();
+                     };
+                     
+                     videoElement.parentElement.style.position = 'relative';
+                     videoElement.parentElement.appendChild(playButton);
+                     
+                     setTimeout(() => playButton.remove(), 5000);
+                  }
+               }, 50);
             };
             
-            videoElement.addEventListener('loadedmetadata', seekAndPlay, { once: true });
-            
-            // If metadata is already loaded
             if (videoElement.readyState >= 1) {
+               // Metadata already loaded
                seekAndPlay();
+            } else {
+               // Wait for metadata to load
+               videoElement.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+               
+               // Also try when it's ready to play
+               videoElement.addEventListener('canplay', seekAndPlay, { once: true });
             }
          }
-      }, 100);
+      }, 150);
    }
 
    showVideoError(dom, title, message) {
