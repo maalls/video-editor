@@ -8,7 +8,9 @@ export default class Database {
 
         this.sourceFolder = sourceFolder;
         if(!workdir) {
-            workdir = sourceFolder;
+            this.workdir = sourceFolder;
+        } else {
+            this.workdir = workdir;
         }
         this.databaseFile = path.join(workdir, 'database.json');
         this.data = {};
@@ -41,13 +43,27 @@ export default class Database {
         const files = this.getVideoFilenames();
         const data = files.map(file => {
             const videoInfo = this.getVideoInfoFromFilename(file);
+            this.generateThumbnails(file);
             this.set(file, videoInfo);
         });
     }
 
-    
+    generateThumbnails(videoFile) {
+        const thumbnailDir = path.join(this.workdir, 'thumbnails');
+        if (!fs.existsSync(thumbnailDir)) {
+            fs.mkdirSync(thumbnailDir);
+        }
 
-    
+        const fullPath = this.getVideoFullPath(videoFile);
+        const thumbnailPath = path.join(thumbnailDir, `${path.basename(videoFile, '.MP4')}.jpg`);
+        if(!fs.existsSync(thumbnailPath)) {
+
+            const command = `/usr/local/bin/ffmpeg -i "${fullPath}" -ss 00:00:01.000 -vframes 1 "${thumbnailPath}"`;
+            console.log("command", command);
+            execSync(command);
+            console.log(`Generated thumbnail for ${videoFile} at ${thumbnailPath}`);
+        }
+    }
 
     getVideoFilenames() {
         const files = fs.readdirSync(this.sourceFolder);
@@ -57,11 +73,12 @@ export default class Database {
 
     getVideoInfoFromFilename(filename) {
         
-        const fullPath = this.sourceFolder + '/' + filename;
+        const fullPath = this.getVideoFullPath(filename);
         const ffprob = this.getFfprobeInfo(fullPath);
         const videoStream = ffprob.streams.find(s => s.codec_type === "video");
         const audioStream = ffprob.streams.find(s => s.codec_type === "audio");
     
+        //console.log('filename', filename, ffprob)
         return {
             filename: filename,
             info: {
@@ -70,8 +87,13 @@ export default class Database {
                     video: videoStream,
                     audio: audioStream
                 }
-            }
+            },
+            created_at: ffprob.format.tags.creation_time
         };
+    }
+
+    getVideoFullPath(filename) {
+        return this.sourceFolder + '/' + filename;
     }
 
     getFfprobeInfo(filePath) {

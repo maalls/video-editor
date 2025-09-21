@@ -25,9 +25,13 @@ export default class Server {
       app.use(express.json());
 
       // Serve static files from frontend directory
-      console.log('Serving static files from:', `${FRONTEND_DIR}/static`);
       app.use('/static', express.static(path.join(FRONTEND_DIR, 'static')));
 
+      const workDir = path.join(FRONTEND_DIR, '../../var/work');
+      app.use('/work', express.static(workDir));
+
+      console.log("work dir", workDir);
+      
       // Video database - will store video info indexed by video ID
 
       /**

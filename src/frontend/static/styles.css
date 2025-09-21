@@ -28,6 +28,8 @@ body {
 }
 
 .video-container {
+   display: flex;
+   flex-direction: column;
    background-color: green;
    padding: 0px;
    width: 300px;

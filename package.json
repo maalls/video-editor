@@ -5,7 +5,7 @@
    "main": "run.js",
    "type": "module",
    "scripts": {
-      "test": "node --test test/**/*.test.js",
+      "test": "node --test src/**/*.test.js",
       "test:database": "node --test src/backend/Database/__tests__/Database.test.js",
       "test:database:only": "node --test --test-only src/backend/Database/__tests__/Database.test.js",
       "test:only": "node --test --test-only src/**/*.test.js",

@@ -40,13 +40,16 @@ class VideoLibraryApp {
       // Create Bootstrap header
       const header = this.uiBuilder.createTag('header');
       header.className = 'bg-primary text-center pd-2';
-      header.innerHTML = `AI Vids Editor`;
+      header.innerHTML = `Video Editor - AI Interface`;
 
       this.app = {
          element: this.uiBuilder.container,
          childrens: {
             header: {
                element: header,
+            },
+            display: {
+               element: this.uiBuilder.createTag('div', null, 'display'),
             },
             main: {
                element: this.uiBuilder.createTag('div', null, 'main'),
@@ -71,6 +74,8 @@ class VideoLibraryApp {
             //this.loadSidebar();
 
             this.loadEditor();
+            this.loadDisplay();
+
             // Global error handling for better debugging
             window.addEventListener('error', event => {
                console.error('🚨 Global Error:', {
@@ -104,8 +109,6 @@ class VideoLibraryApp {
       console.log('app view created');
    }
 
-   
-
    addElements({ element, childrens }, parentDom) {
       parentDom = parentDom ? parentDom : document.body;
       console.log('append', element, 'to', parentDom);
@@ -119,6 +122,14 @@ class VideoLibraryApp {
       }
    }
 
+   async loadDisplay() {
+      if (this.project.dailies.length) {
+         const filename = this.project.dailies[0].filename;
+         console.log('loadDisplay', filename);
+         this.displayClip(this.project.dailies[0]);
+      }
+   }
+
    async loadEditor() {
       const ratio = 1920 / 1080;
       const width = 300;
@@ -127,29 +138,71 @@ class VideoLibraryApp {
       for (const video of this.project.dailies) {
          // Create enhanced video player UI
          console.log('Creating video player for:', video.filename);
-         const videoPlayerContainer = this.uiBuilder.createTag('div', '', 'timeline');
-         videoPlayerContainer.innerHTML = `
-                
-                    
-                    <video 
-                    id="video-player-${video.filename}" 
-                    class="video" 
-                    controls 
-                    preload="metadata"
-                    style="width: ${width}px; height: ${height}px; background: #000;"
-                    >
-                    <source src="/video/${video.filename}/stream" type="video/mp4">
-                    Your browser does not support the video tag.
-                    </video>
-              
-                  
-                
-        `;
 
-         dom.element.append(videoPlayerContainer);
+         const videoContainer = this.uiBuilder.createTag('div', '', 'video-container');
+         videoContainer.setAttribute('style', `width: ${width}px; height: ${height + 150}px;`);
+         /*const videoTag = this.uiBuilder.createTag('video', '', 'video');
+         videoTag.setAttribute('id', `video-player-${video.filename}`);
+         videoTag.setAttribute('class', 'video');
+         videoTag.setAttribute('controls', '');
+         videoTag.setAttribute('preload', 'none');
+         videoTag.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
+
+         const source = this.uiBuilder.createTag('source', '', 'video-source');
+         source.setAttribute('src', `/video/${video.filename}/stream`);
+         source.setAttribute('type', 'video/mp4');
+         videoTag.append(source);
+
+         videoContainer.append(videoTag);*/
+
+         const imageTag = this.uiBuilder.createTag('img');
+         imageTag.src = 'work/thumbnails/' + video.filename.replace('.MP4', '.jpg');
+         imageTag.setAttribute(
+            'style',
+            `width: ${width}px; height: ${height}px; background: yellow;`
+         );
+
+         imageTag.addEventListener('click', event => {
+            console.log('click', video.filename, imageTag.src);
+            this.displayClip(video);
+         });
+
+         videoContainer.append(imageTag);
+
+         const videoInfo = this.uiBuilder.createTag('div', '', 'video-info');
+         videoInfo.innerHTML = `
+            <h5>${video.filename}</h5>
+            <p>Created at: ${new Date(video.created_at).toLocaleString()}</p>
+            <p>${video.info.ffprob.video.width}x${video.info.ffprob.video.height}, FPS: ${eval(video.info.ffprob.video.avg_frame_rate).toFixed(2)}</p>
+            <p>Duration: ${parseFloat(video.info.ffprob.video.duration).toFixed(2)} seconds</p>
+            `;
+         videoContainer.append(videoInfo);
+
+         dom.element.append(videoContainer);
 
          // Get video element and add event listeners
       }
+   }
+
+   displayClip(video, start = true) {
+      const ratio = 1920 / 1080;
+      const width = 300;
+      const height = width / ratio;
+
+      const display = this.app.childrens.display.element;
+      const videoTag = this.uiBuilder.createTag('video', '', 'video');
+      videoTag.setAttribute('id', `video-player-${video.filename}`);
+      videoTag.setAttribute('class', 'video');
+      videoTag.setAttribute('controls', '');
+      videoTag.setAttribute('preload', 'meta');
+      videoTag.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
+      const source = this.uiBuilder.createTag('source', '', 'video-source');
+      source.setAttribute('src', `/video/${video.filename}/stream`);
+      source.setAttribute('type', 'video/mp4');
+      videoTag.append(source);
+
+      display.innerHTML = null;
+      display.append(videoTag);
    }
 
    showVideoError(dom, title, message) {

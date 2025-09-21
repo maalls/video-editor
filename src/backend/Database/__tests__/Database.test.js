@@ -62,12 +62,14 @@ describe('Database', () => {
             assert.strictEqual(database.size(), 3);
         });
         
-        test("test save()", () => {
-            database.load();
-            const initialSize = database.size();
-            database.save();
-            const sample = fs.readFileSync(database.databaseFile);
-            console.log("sample:", sample.toString());
+    });
+
+    describe("Thumbnail Generation", () => {
+        test.only("Test generateThumbnails()", () => {
+            const testFilename = 'GX012246.MP4';
+            database.generateThumbnails(testFilename);
+            const thumbnailPath = `${mockWorkDir}/thumbnails/GX012246.jpg`;
+            assert.ok(fs.existsSync(thumbnailPath), "Thumbnail file should exist");
         });
     });
 });
