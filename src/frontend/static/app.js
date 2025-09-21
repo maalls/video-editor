@@ -321,21 +321,28 @@ class VideoLibraryApp {
       // First, display the clicked video
       this.displayClip(video, false);
       
-      // Wait a bit for the video to load, then seek to the position
+      // Wait a bit for the video to load, then seek to the position and play
       setTimeout(() => {
          const videoElement = document.querySelector(`#video-player-${video.filename}`);
          if (videoElement) {
-            videoElement.addEventListener('loadedmetadata', () => {
+            const seekAndPlay = () => {
                const targetTime = progress * videoElement.duration;
                videoElement.currentTime = targetTime;
-               console.log(`Seeking to ${targetTime.toFixed(2)}s in ${video.filename}`);
-            }, { once: true });
+               
+               // Auto-play the video after seeking
+               videoElement.play().then(() => {
+                  console.log(`Playing ${video.filename} from ${targetTime.toFixed(2)}s`);
+               }).catch(error => {
+                  console.log('Auto-play prevented by browser policy:', error);
+                  console.log('Click the play button to start playback');
+               });
+            };
+            
+            videoElement.addEventListener('loadedmetadata', seekAndPlay, { once: true });
             
             // If metadata is already loaded
             if (videoElement.readyState >= 1) {
-               const targetTime = progress * videoElement.duration;
-               videoElement.currentTime = targetTime;
-               console.log(`Seeking to ${targetTime.toFixed(2)}s in ${video.filename}`);
+               seekAndPlay();
             }
          }
       }, 100);
