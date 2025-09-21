@@ -270,6 +270,23 @@ export default class Database {
          '-r', profile.fps.toString()
       ];
 
+      // Add H.264 profile for workspace optimization
+      if (profile.profile) {
+         args.push('-profile:v', profile.profile);
+      }
+
+      // Add keyframe interval for editing optimization
+      if (profile.keyframe_interval) {
+         args.push('-g', profile.keyframe_interval.toString());
+         args.push('-keyint_min', profile.keyframe_interval.toString());
+      }
+
+      // Enable editing optimization flags
+      if (profile.editing_optimized) {
+         args.push('-tune', 'film');
+         args.push('-movflags', '+faststart'); // Optimize for web/editing
+      }
+
       // Add resolution scaling if specified
       if (profile.resolution && profile.resolution !== 'original') {
          args.push('-vf', `scale=${profile.resolution}`);
@@ -329,6 +346,20 @@ export default class Database {
    getCompressionProfiles() {
       if (!this.compressionConfig) return {};
       return this.compressionConfig.compression.profiles;
+   }
+
+   getWorkspaceProfiles() {
+      const profiles = this.getCompressionProfiles();
+      return Object.entries(profiles)
+         .filter(([key, profile]) => profile.editing_optimized === true)
+         .reduce((acc, [key, profile]) => {
+            acc[key] = profile;
+            return acc;
+         }, {});
+   }
+
+   getDefaultWorkspaceProfile() {
+      return 'workspace_basic';
    }
 
    getFileSize(filePath) {

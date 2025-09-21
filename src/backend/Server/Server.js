@@ -274,6 +274,72 @@ export default class Server {
          }
       });
 
+      /**
+       * GET /compression/workspace - Get workspace-specific compression profiles
+       */
+      app.get('/compression/workspace', (req, res) => {
+         try {
+            const workspaceProfiles = this.videoDatabase.getWorkspaceProfiles();
+            const defaultProfile = this.videoDatabase.getDefaultWorkspaceProfile();
+            
+            res.json({
+               profiles: workspaceProfiles,
+               default: defaultProfile,
+               description: "Video editing optimized compression profiles"
+            });
+         } catch (err) {
+            res.status(500).json({
+               error: 'Failed to get workspace compression profiles',
+               message: err.message,
+            });
+         }
+      });
+
+      /**
+       * POST /compress/workspace/:id - Compress video with workspace profile
+       */
+      app.post('/compress/workspace/:id', async (req, res) => {
+         const videoId = req.params.id;
+         const { profile = 'workspace_basic' } = req.body;
+
+         if (!this.videoDatabase.has(videoId)) {
+            return res.status(404).json({
+               error: 'Video not found',
+               message: `No video found with ID: ${videoId}`,
+            });
+         }
+
+         // Validate it's a workspace profile
+         const workspaceProfiles = this.videoDatabase.getWorkspaceProfiles();
+         if (!workspaceProfiles[profile]) {
+            return res.status(400).json({
+               error: 'Invalid workspace profile',
+               message: `Profile '${profile}' is not a workspace editing profile`,
+               availableProfiles: Object.keys(workspaceProfiles)
+            });
+         }
+
+         try {
+            const result = await this.videoDatabase.compressVideo(videoId, profile, (progress) => {
+               console.log(`Workspace compression: ${progress.filename} - ${progress.progress}%`);
+            });
+
+            res.json({
+               message: 'Workspace video compression completed',
+               videoId,
+               profile: workspaceProfiles[profile].name,
+               optimizedForEditing: true,
+               ...result
+            });
+         } catch (err) {
+            res.status(500).json({
+               error: 'Workspace video compression failed',
+               message: err.message,
+               videoId
+            });
+         }
+      });
+
       // Health check endpoint
       app.get('/health', (req, res) => {
          res.json({
@@ -321,7 +387,9 @@ export default class Server {
             console.log('  GET  /video/:id/stream - Stream video file');
             console.log('  POST /refresh          - Refresh video database');
             console.log('  GET  /compression/profiles - Get compression profiles');
+            console.log('  GET  /compression/workspace - Get workspace editing profiles');
             console.log('  POST /compress/:id     - Compress specific video');
+            console.log('  POST /compress/workspace/:id - Compress with workspace profile');
             console.log('  POST /compress/batch   - Compress all videos');
             console.log('  GET  /compressed       - List compressed videos');
          });
