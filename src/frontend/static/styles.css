@@ -26,6 +26,7 @@ body {
    display: flex;
    padding: 20px;
    position: relative;
+   cursor: pointer;
 }
 
 .video-container {
@@ -84,7 +85,7 @@ header img:hover {
    z-index: 1000;
    pointer-events: none;
    box-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
-   transition: left 0.1s ease-out;
+   transition: left 0.05s ease-out;
 }
 
 .timeline-playhead::before {

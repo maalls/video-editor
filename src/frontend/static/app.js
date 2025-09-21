@@ -171,6 +171,11 @@ class VideoLibraryApp {
       this.playhead.style.left = '20px'; // Initial position (accounting for padding)
       dom.element.appendChild(this.playhead);
       
+      // Add click interaction to timeline
+      dom.element.addEventListener('click', (event) => {
+         this.handleTimelineClick(event);
+      });
+      
       for (const video of this.project.dailies) {
          // Create enhanced video player UI
          console.log('Creating video player for:', video.filename);
@@ -275,6 +280,65 @@ class VideoLibraryApp {
    calculateTimelineWidth() {
       const videoWidth = this.configuration.timeline.height * (1920 / 1080);
       return this.project.dailies.length * videoWidth;
+   }
+
+   handleTimelineClick(event) {
+      // Don't handle clicks on the playhead itself
+      if (event.target.classList.contains('timeline-playhead')) return;
+      
+      const timeline = event.currentTarget;
+      const rect = timeline.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const paddingLeft = 20; // Timeline padding
+      
+      // Calculate which video and position within that video
+      const videoWidth = this.configuration.timeline.height * (1920 / 1080);
+      const relativeClickX = clickX - paddingLeft;
+      
+      if (relativeClickX < 0) return; // Clicked in padding area
+      
+      const videoIndex = Math.floor(relativeClickX / videoWidth);
+      const positionInVideo = relativeClickX % videoWidth;
+      
+      if (videoIndex >= this.project.dailies.length) return; // Clicked beyond videos
+      
+      // Calculate progress within the clicked video (0 to 1)
+      const progressInVideo = positionInVideo / videoWidth;
+      
+      // Update playhead position immediately
+      this.playhead.style.left = `${clickX}px`;
+      
+      // Get the clicked video
+      const clickedVideo = this.project.dailies[videoIndex];
+      
+      // Load and seek to the clicked video position
+      this.seekToVideoPosition(clickedVideo, progressInVideo, videoIndex);
+      
+      console.log(`Timeline clicked: Video ${videoIndex} (${clickedVideo.filename}) at ${(progressInVideo * 100).toFixed(1)}%`);
+   }
+
+   seekToVideoPosition(video, progress, videoIndex) {
+      // First, display the clicked video
+      this.displayClip(video, false);
+      
+      // Wait a bit for the video to load, then seek to the position
+      setTimeout(() => {
+         const videoElement = document.querySelector(`#video-player-${video.filename}`);
+         if (videoElement) {
+            videoElement.addEventListener('loadedmetadata', () => {
+               const targetTime = progress * videoElement.duration;
+               videoElement.currentTime = targetTime;
+               console.log(`Seeking to ${targetTime.toFixed(2)}s in ${video.filename}`);
+            }, { once: true });
+            
+            // If metadata is already loaded
+            if (videoElement.readyState >= 1) {
+               const targetTime = progress * videoElement.duration;
+               videoElement.currentTime = targetTime;
+               console.log(`Seeking to ${targetTime.toFixed(2)}s in ${video.filename}`);
+            }
+         }
+      }, 100);
    }
 
    showVideoError(dom, title, message) {
