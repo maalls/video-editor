@@ -165,6 +165,12 @@ class VideoLibraryApp {
       const height = this.configuration.timeline.height;
       const width = height * ratio;
       const dom = this.dom('main');
+      
+      // Create timeline playhead
+      this.playhead = this.uiBuilder.createTag('div', '', 'timeline-playhead');
+      this.playhead.style.left = '20px'; // Initial position (accounting for padding)
+      dom.element.appendChild(this.playhead);
+      
       for (const video of this.project.dailies) {
          // Create enhanced video player UI
          console.log('Creating video player for:', video.filename);
@@ -230,6 +236,45 @@ class VideoLibraryApp {
 
       display.innerHTML = null;
       display.append(videoTag);
+      
+      // Add event listeners for playhead synchronization
+      videoTag.addEventListener('timeupdate', () => {
+         this.updatePlayheadPosition(videoTag.currentTime, video);
+      });
+      
+      videoTag.addEventListener('loadedmetadata', () => {
+         this.videoDuration = videoTag.duration;
+         console.log('Video duration loaded:', this.videoDuration);
+      });
+   }
+
+   updatePlayheadPosition(currentTime, currentVideo) {
+      if (!this.playhead || !this.videoDuration) return;
+      
+      // Calculate the total timeline width
+      const timelineWidth = this.calculateTimelineWidth();
+      const paddingLeft = 20; // Timeline padding
+      
+      // For now, we'll show the playhead position relative to the current video
+      // In a full timeline implementation, you'd need to calculate based on all videos
+      const videoIndex = this.project.dailies.findIndex(v => v.filename === currentVideo.filename);
+      const videoWidth = this.configuration.timeline.height * (1920 / 1080);
+      
+      // Calculate position within the current video thumbnail
+      const progressWithinVideo = currentTime / this.videoDuration;
+      const positionWithinVideo = progressWithinVideo * videoWidth;
+      
+      // Calculate absolute position in timeline
+      const absolutePosition = paddingLeft + (videoIndex * videoWidth) + positionWithinVideo;
+      
+      this.playhead.style.left = `${absolutePosition}px`;
+      
+      console.log(`Playhead: ${currentTime.toFixed(2)}s / ${this.videoDuration.toFixed(2)}s at position ${absolutePosition}px`);
+   }
+
+   calculateTimelineWidth() {
+      const videoWidth = this.configuration.timeline.height * (1920 / 1080);
+      return this.project.dailies.length * videoWidth;
    }
 
    showVideoError(dom, title, message) {

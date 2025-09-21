@@ -25,6 +25,7 @@ body {
    background-color: lightgray;
    display: flex;
    padding: 20px;
+   position: relative;
 }
 
 .video-container {
@@ -71,6 +72,43 @@ header img:hover {
 .icon-xl {
    width: 64px;
    height: 64px;
+}
+
+/* Timeline Playhead */
+.timeline-playhead {
+   position: absolute;
+   top: 0;
+   bottom: 0;
+   width: 3px;
+   background-color: #ff0000;
+   z-index: 1000;
+   pointer-events: none;
+   box-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
+   transition: left 0.1s ease-out;
+}
+
+.timeline-playhead::before {
+   content: '';
+   position: absolute;
+   top: -8px;
+   left: -5px;
+   width: 0;
+   height: 0;
+   border-left: 6px solid transparent;
+   border-right: 6px solid transparent;
+   border-top: 8px solid #ff0000;
+}
+
+.timeline-playhead::after {
+   content: '';
+   position: absolute;
+   bottom: -8px;
+   left: -5px;
+   width: 0;
+   height: 0;
+   border-left: 6px solid transparent;
+   border-right: 6px solid transparent;
+   border-bottom: 8px solid #ff0000;
 }
 
 /* Robot theme colors */
