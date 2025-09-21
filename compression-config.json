@@ -1,0 +1,68 @@
+{
+  "compression": {
+    "enabled": true,
+    "outputDirectory": "./var/work/compressed",
+    "profiles": {
+      "web": {
+        "name": "Web Optimized",
+        "videoCodec": "libx264",
+        "audioCodec": "aac",
+        "videoBitrate": "2000k",
+        "audioBitrate": "128k",
+        "resolution": "1920x1080",
+        "fps": 30,
+        "crf": 23,
+        "preset": "medium",
+        "format": "mp4",
+        "suffix": "_web"
+      },
+      "mobile": {
+        "name": "Mobile Optimized", 
+        "videoCodec": "libx264",
+        "audioCodec": "aac",
+        "videoBitrate": "1000k",
+        "audioBitrate": "96k",
+        "resolution": "1280x720",
+        "fps": 30,
+        "crf": 25,
+        "preset": "fast",
+        "format": "mp4",
+        "suffix": "_mobile"
+      },
+      "thumbnail": {
+        "name": "Thumbnail Preview",
+        "videoCodec": "libx264", 
+        "audioCodec": "aac",
+        "videoBitrate": "500k",
+        "audioBitrate": "64k",
+        "resolution": "640x360",
+        "fps": 15,
+        "crf": 28,
+        "preset": "fast",
+        "format": "mp4",
+        "suffix": "_thumb"
+      },
+      "high_quality": {
+        "name": "High Quality",
+        "videoCodec": "libx264",
+        "audioCodec": "aac", 
+        "videoBitrate": "5000k",
+        "audioBitrate": "192k",
+        "resolution": "1920x1080",
+        "fps": 60,
+        "crf": 18,
+        "preset": "slow",
+        "format": "mp4",
+        "suffix": "_hq"
+      }
+    },
+    "defaultProfile": "web",
+    "ffmpegPath": "/usr/local/bin/ffmpeg",
+    "options": {
+      "overwriteExisting": false,
+      "preserveOriginal": true,
+      "generateThumbnails": true,
+      "logLevel": "info"
+    }
+  }
+}

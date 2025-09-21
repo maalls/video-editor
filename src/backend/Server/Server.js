@@ -166,6 +166,114 @@ export default class Server {
          }
       });
 
+      /**
+       * GET /compression/profiles - Get available compression profiles
+       */
+      app.get('/compression/profiles', (req, res) => {
+         try {
+            const profiles = this.videoDatabase.getCompressionProfiles();
+            res.json({
+               profiles,
+               default: this.videoDatabase.compressionConfig?.compression?.defaultProfile || 'web'
+            });
+         } catch (err) {
+            res.status(500).json({
+               error: 'Failed to get compression profiles',
+               message: err.message,
+            });
+         }
+      });
+
+      /**
+       * POST /compress/:id - Compress a specific video
+       */
+      app.post('/compress/:id', async (req, res) => {
+         const videoId = req.params.id;
+         const { profile } = req.body;
+
+         if (!this.videoDatabase.has(videoId)) {
+            return res.status(404).json({
+               error: 'Video not found',
+               message: `No video found with ID: ${videoId}`,
+            });
+         }
+
+         try {
+            const result = await this.videoDatabase.compressVideo(videoId, profile, (progress) => {
+               // Could implement WebSocket for real-time progress updates
+               console.log(`Compression progress: ${progress.filename} - ${progress.progress}%`);
+            });
+
+            res.json({
+               message: 'Video compression completed',
+               videoId,
+               ...result
+            });
+         } catch (err) {
+            res.status(500).json({
+               error: 'Video compression failed',
+               message: err.message,
+               videoId
+            });
+         }
+      });
+
+      /**
+       * POST /compress/batch - Compress all videos with specified profile
+       */
+      app.post('/compress/batch', async (req, res) => {
+         const { profile } = req.body;
+
+         try {
+            const result = await this.videoDatabase.compressAllVideos(profile, (progress) => {
+               console.log(`Batch compression: [${progress.batchProgress.current}/${progress.batchProgress.total}] ${progress.filename} - ${progress.progress}%`);
+            });
+
+            res.json({
+               message: 'Batch compression completed',
+               ...result
+            });
+         } catch (err) {
+            res.status(500).json({
+               error: 'Batch compression failed',
+               message: err.message,
+            });
+         }
+      });
+
+      /**
+       * GET /compressed - List compressed videos
+       */
+      app.get('/compressed', (req, res) => {
+         try {
+            const compressedDir = this.videoDatabase.compressionConfig?.compression?.outputDirectory;
+            if (!compressedDir || !fs.existsSync(compressedDir)) {
+               return res.json({ files: [] });
+            }
+
+            const files = fs.readdirSync(compressedDir)
+               .filter(file => file.endsWith('.mp4'))
+               .map(file => {
+                  const filePath = path.join(compressedDir, file);
+                  const stats = fs.statSync(filePath);
+                  return {
+                     filename: file,
+                     size: stats.size,
+                     sizeFormatted: this.videoDatabase.formatFileSize(stats.size),
+                     created: stats.ctime,
+                     modified: stats.mtime
+                  };
+               });
+
+            res.json({ files });
+         } catch (err) {
+            res.status(500).json({
+               error: 'Failed to list compressed videos',
+               message: err.message,
+            });
+         }
+      });
+
       // Health check endpoint
       app.get('/health', (req, res) => {
          res.json({
@@ -212,6 +320,10 @@ export default class Server {
             console.log('  GET  /video/:id/exists - Check if video exists');
             console.log('  GET  /video/:id/stream - Stream video file');
             console.log('  POST /refresh          - Refresh video database');
+            console.log('  GET  /compression/profiles - Get compression profiles');
+            console.log('  POST /compress/:id     - Compress specific video');
+            console.log('  POST /compress/batch   - Compress all videos');
+            console.log('  GET  /compressed       - List compressed videos');
          });
       } catch (err) {
          console.error('Failed to start server:', err);
