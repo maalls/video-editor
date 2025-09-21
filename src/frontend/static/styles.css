@@ -24,6 +24,7 @@ body {
 .timeline {
    background-color: lightgray;
    display: flex;
+   padding: 20px;
 }
 
 .video-container {

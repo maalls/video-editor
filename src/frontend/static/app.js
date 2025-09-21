@@ -82,7 +82,7 @@ class VideoLibraryApp {
                },
             },
             main: {
-               element: this.uiBuilder.createTag('div', null, 'main'),
+               element: this.uiBuilder.createTag('div', null, 'main timeline'),
             },
          },
       };
