@@ -24,7 +24,12 @@
       "deps:diff": "node tools/package-diff/bin/package-diff.js",
       "deps:since": "node tools/package-diff/bin/package-diff.js --since",
       "deps:list": "node tools/package-diff/bin/package-diff.js --list",
-      "deps:help": "node tools/package-diff/bin/package-diff.js --help"
+      "deps:help": "node tools/package-diff/bin/package-diff.js --help",
+      "release:tag": "scripts/create-tag.sh",
+      "release:major": "scripts/create-tag.sh major",
+      "release:minor": "scripts/create-tag.sh minor",
+      "release:patch": "scripts/create-tag.sh patch",
+      "release:help": "scripts/create-tag.sh help"
    },
    "jest": {
       "testEnvironment": "node",

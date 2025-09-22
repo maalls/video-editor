@@ -8,7 +8,7 @@ class VideoLibraryApp {
       this.filteredVideos = [];
       this.isLoading = false;
       this.uiBuilder = new UiBuilder();
-      
+
       // Load debug configuration
       this.debugConfig = {
          debug: true,
@@ -17,7 +17,7 @@ class VideoLibraryApp {
          show_video_metadata: false,
          log_video_events: true,
          connection_check_interval: 10000,
-         server_health_check_interval: 300000
+         server_health_check_interval: 300000,
       };
       this.loadDebugConfig();
 
@@ -75,10 +75,10 @@ class VideoLibraryApp {
    toggleDebugMode() {
       this.debugConfig.debug = !this.debugConfig.debug;
       console.log('🐛 Debug mode:', this.debugConfig.debug ? 'ON' : 'OFF');
-      
+
       // Update connection monitor visibility
       this.updateDebugUI();
-      
+
       // Save to localStorage for persistence
       localStorage.setItem('debug_mode', this.debugConfig.debug.toString());
    }
@@ -86,11 +86,12 @@ class VideoLibraryApp {
    updateDebugUI() {
       const monitor = document.getElementById('connection-monitor');
       const debugToggle = document.getElementById('debug-toggle');
-      
+
       if (monitor) {
-         monitor.style.display = (this.debugConfig.debug && this.debugConfig.check_server_connections) ? 'block' : 'none';
+         monitor.style.display =
+            this.debugConfig.debug && this.debugConfig.check_server_connections ? 'block' : 'none';
       }
-      
+
       if (debugToggle) {
          debugToggle.textContent = this.debugConfig.debug ? '🐛 Debug: ON' : '🐛 Debug: OFF';
          debugToggle.className = `btn btn-sm ${this.debugConfig.debug ? 'btn-warning' : 'btn-secondary'}`;
