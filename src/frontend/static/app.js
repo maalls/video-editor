@@ -613,7 +613,7 @@ class VideoLibraryApp {
       const existingDebug = document.querySelector('.debug-info');
       if (existingDebug) existingDebug.remove();
 
-      // Create debug info display
+      // Create debug info display container
       const debugDiv = document.createElement('div');
       debugDiv.className = 'debug-info';
       debugDiv.style.cssText = `
@@ -622,23 +622,77 @@ class VideoLibraryApp {
          right: 10px;
          background: rgba(0, 0, 0, 0.8);
          color: white;
-         padding: 10px;
+         padding: 10px 35px 10px 10px;
          border-radius: 5px;
          font-family: monospace;
          font-size: 12px;
          z-index: 10000;
          max-width: 300px;
+         border: 1px solid rgba(255, 255, 255, 0.2);
       `;
-      debugDiv.textContent = message;
+
+      // Create close button
+      const closeButton = document.createElement('button');
+      closeButton.innerHTML = '×';
+      closeButton.style.cssText = `
+         position: absolute;
+         top: 5px;
+         right: 8px;
+         background: none;
+         border: none;
+         color: white;
+         font-size: 16px;
+         font-weight: bold;
+         cursor: pointer;
+         opacity: 0.7;
+         transition: opacity 0.2s ease;
+         padding: 0;
+         line-height: 1;
+         width: 20px;
+         height: 20px;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+      `;
+
+      // Close button hover effect
+      closeButton.onmouseenter = () => {
+         closeButton.style.opacity = '1';
+         closeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+         closeButton.style.borderRadius = '3px';
+      };
+
+      closeButton.onmouseleave = () => {
+         closeButton.style.opacity = '0.7';
+         closeButton.style.backgroundColor = 'transparent';
+      };
+
+      // Create message content
+      const messageContent = document.createElement('div');
+      messageContent.textContent = message;
+      messageContent.style.cssText = `
+         white-space: pre-wrap;
+         word-break: break-word;
+      `;
+
+      // Assemble the debug info
+      debugDiv.appendChild(messageContent);
+      debugDiv.appendChild(closeButton);
 
       document.body.appendChild(debugDiv);
 
-      // Auto-remove after 3 seconds
-      setTimeout(() => {
+      // Auto-remove after specified duration (but allow manual close)
+      const autoRemoveTimeout = setTimeout(() => {
          if (debugDiv.parentElement) {
             debugDiv.remove();
          }
       }, duration);
+
+      // Close button click handler (handles both manual close and timeout clearing)
+      closeButton.onclick = () => {
+         clearTimeout(autoRemoveTimeout);
+         debugDiv.remove();
+      };
    }
 
    seekToVideoPosition(video, progress, videoIndex) {
