@@ -8,6 +8,18 @@ class VideoLibraryApp {
       this.filteredVideos = [];
       this.isLoading = false;
       this.uiBuilder = new UiBuilder();
+      
+      // Load debug configuration
+      this.debugConfig = {
+         debug: true,
+         check_server_connections: true,
+         debug_timeline_clicks: true,
+         show_video_metadata: false,
+         log_video_events: true,
+         connection_check_interval: 10000,
+         server_health_check_interval: 300000
+      };
+      this.loadDebugConfig();
 
       // Server connection monitoring (display only)
       this.serverConnectionStats = {
@@ -45,6 +57,46 @@ class VideoLibraryApp {
       this.start();
    }
 
+   async loadDebugConfig() {
+      try {
+         const response = await fetch('/debug.json');
+         if (response.ok) {
+            const config = await response.json();
+            this.debugConfig = { ...this.debugConfig, ...config };
+            console.log('🐛 Debug config loaded:', this.debugConfig);
+         } else {
+            console.warn('⚠️ Could not load debug.json, using defaults');
+         }
+      } catch (error) {
+         console.warn('⚠️ Error loading debug config:', error.message);
+      }
+   }
+
+   toggleDebugMode() {
+      this.debugConfig.debug = !this.debugConfig.debug;
+      console.log('🐛 Debug mode:', this.debugConfig.debug ? 'ON' : 'OFF');
+      
+      // Update connection monitor visibility
+      this.updateDebugUI();
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('debug_mode', this.debugConfig.debug.toString());
+   }
+
+   updateDebugUI() {
+      const monitor = document.getElementById('connection-monitor');
+      const debugToggle = document.getElementById('debug-toggle');
+      
+      if (monitor) {
+         monitor.style.display = (this.debugConfig.debug && this.debugConfig.check_server_connections) ? 'block' : 'none';
+      }
+      
+      if (debugToggle) {
+         debugToggle.textContent = this.debugConfig.debug ? '🐛 Debug: ON' : '🐛 Debug: OFF';
+         debugToggle.className = `btn btn-sm ${this.debugConfig.debug ? 'btn-warning' : 'btn-secondary'}`;
+      }
+   }
+
    async checkServerStatus() {
       console.log('🔍 Checking server status...');
 
@@ -68,8 +120,13 @@ class VideoLibraryApp {
       header.className = 'bg-primary text-white text-center';
       header.innerHTML = `
          <div class="container-fluid d-flex justify-content-between align-items-center pe-1">
-            <div id="connection-monitor" class="small opacity-75" title="Real-time server connection monitoring">
-               <span class="badge bg-secondary">Server: 0 active</span>
+            <div class="d-flex align-items-center gap-2">
+               <button id="debug-toggle" class="btn btn-sm btn-secondary" title="Toggle debug mode">
+                  🐛 Debug: OFF
+               </button>
+               <div id="connection-monitor" class="small opacity-75" title="Real-time server connection monitoring" style="display: none;">
+                  <span class="badge bg-secondary">Server: 0 active</span>
+               </div>
             </div>
             <div>
                <small class="opacity-75">Video Editor AI Interface</small>
@@ -99,6 +156,23 @@ class VideoLibraryApp {
 
       let context = this.uiBuilder.container;
       this.addElements(this.app);
+
+      // Set up debug toggle button
+      const debugToggle = document.getElementById('debug-toggle');
+      if (debugToggle) {
+         debugToggle.addEventListener('click', () => {
+            this.toggleDebugMode();
+         });
+      }
+
+      // Check localStorage for saved debug preference
+      const savedDebugMode = localStorage.getItem('debug_mode');
+      if (savedDebugMode !== null) {
+         this.debugConfig.debug = savedDebugMode === 'true';
+      }
+
+      // Initialize debug UI
+      this.updateDebugUI();
 
       try {
          console.log('Fetching videos from API...');
@@ -146,8 +220,10 @@ class VideoLibraryApp {
                }
             });
 
-            // Initialize connection monitoring
-            this.fetchServerConnectionStats();
+            // Initialize connection monitoring if enabled
+            if (this.debugConfig.check_server_connections) {
+               this.fetchServerConnectionStats();
+            }
 
             // Console styling
          }
@@ -267,7 +343,9 @@ class VideoLibraryApp {
       videoPlayer.addEventListener('timeupdate', () => {
          // Only update playhead if we're not in the middle of a seek operation
          if (!this.isSeeking && this.currentVideo) {
-            //console.log('updating playhead', videoPlayer.currentTime);
+            if (this.debugConfig.log_video_events) {
+               //console.log('updating playhead', videoPlayer.currentTime);
+            }
             this.updatePlayheadPosition(videoPlayer.currentTime);
          }
       });
@@ -489,10 +567,12 @@ class VideoLibraryApp {
       // Get the clicked video
       const clickedVideo = this.project.dailies[videoIndex];
 
-      // Show visual debug info
-      this.showDebugInfo(
-         `🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px`
-      );
+      // Show visual debug info if enabled
+      if (this.debugConfig.debug_timeline_clicks) {
+         this.showDebugInfo(
+            `🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px`
+         );
+      }
 
       // Store the target playhead position for later
       this.targetPlayheadPosition = clickX;
@@ -506,6 +586,9 @@ class VideoLibraryApp {
    }
 
    showDebugInfo(message, duration = 3000) {
+      // Only show debug info if debug mode is enabled
+      if (!this.debugConfig.debug) return;
+
       // Remove existing debug info
       const existingDebug = document.querySelector('.debug-info');
       if (existingDebug) existingDebug.remove();
@@ -823,17 +906,17 @@ class VideoLibraryApp {
    }
 }
 const app = new VideoLibraryApp();
-// Auto-refresh every 5 minutes
+// Auto-refresh server health check based on config
 setInterval(() => {
-   if (app && !app.isLoading) {
+   if (app && !app.isLoading && app.debugConfig.debug) {
       console.log('⏰ Running periodic server check...');
       app.checkServerStatus();
    }
-}, 300000);
+}, app?.debugConfig?.server_health_check_interval || 300000);
 
-// Monitor connections every 10 seconds
+// Monitor connections based on config
 setInterval(() => {
-   if (app) {
+   if (app && app.debugConfig.debug && app.debugConfig.check_server_connections) {
       app.fetchServerConnectionStats();
    }
-}, 10000);
+}, app?.debugConfig?.connection_check_interval || 10000);
