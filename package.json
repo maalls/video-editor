@@ -24,7 +24,9 @@
       "deps:diff": "node tools/package-diff/bin/package-diff.js",
       "deps:since": "node tools/package-diff/bin/package-diff.js --since",
       "deps:list": "node tools/package-diff/bin/package-diff.js --list",
-      "deps:help": "node tools/package-diff/bin/package-diff.js --help"
+      "deps:help": "node tools/package-diff/bin/package-diff.js --help",
+      "release:tag": "scripts/create-tag.sh",
+      "release:help": "echo 'Usage: npm run release:tag <version> [message]\\nExample: npm run release:tag 1.2.0 \"New feature release\"'"
    },
    "jest": {
       "testEnvironment": "node",

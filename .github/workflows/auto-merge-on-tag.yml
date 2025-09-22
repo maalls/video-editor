@@ -1,0 +1,193 @@
+name: Auto-merge on Version Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'     # Déclenche sur les tags comme v1.0.0, v1.2.3, etc.
+      - 'v*.*.*-*'   # Déclenche aussi sur les pre-release comme v1.0.0-beta.1
+
+jobs:
+  auto-merge:
+    name: Auto-merge to main
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Récupère tout l'historique pour le merge
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Get tag information
+        id: tag-info
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          BRANCH_NAME=$(git branch --contains ${{ github.sha }} | grep -v "HEAD" | head -n1 | sed 's/^[* ]*//')
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "source_branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG_NAME from branch: $BRANCH_NAME"
+      
+      - name: Check if main branch exists
+        id: check-main
+        run: |
+          if git show-ref --verify --quiet refs/heads/main; then
+            echo "main_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "main_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Main branch does not exist"
+          fi
+      
+      - name: Attempt merge to main
+        id: merge-attempt
+        if: steps.check-main.outputs.main_exists == 'true'
+        run: |
+          set +e  # Continue on error
+          
+          # Checkout main branch
+          git checkout main
+          git pull origin main
+          
+          # Attempt merge
+          git merge ${{ github.sha }} --no-ff -m "chore: auto-merge tag ${{ steps.tag-info.outputs.tag_name }} to main"
+          MERGE_EXIT_CODE=$?
+          
+          if [ $MERGE_EXIT_CODE -eq 0 ]; then
+            echo "merge_success=true" >> $GITHUB_OUTPUT
+            echo "✅ Merge successful"
+            
+            # Push the merge
+            git push origin main
+            echo "✅ Changes pushed to main"
+          else
+            echo "merge_success=false" >> $GITHUB_OUTPUT
+            echo "❌ Merge failed with conflicts"
+            
+            # Get conflict information
+            CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
+            echo "conflict_files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CONFLICT_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            # Abort the merge
+            git merge --abort
+          fi
+          
+          exit 0  # Always exit successfully to continue workflow
+      
+      - name: Create issue on merge conflict
+        if: steps.check-main.outputs.main_exists == 'true' && steps.merge-attempt.outputs.merge_success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tagName = '${{ steps.tag-info.outputs.tag_name }}';
+            const sourceBranch = '${{ steps.tag-info.outputs.source_branch }}';
+            const conflictFiles = `${{ steps.merge-attempt.outputs.conflict_files }}`;
+            
+            const issueBody = `## 🚨 Auto-merge Conflict Alert
+            
+            **Tag:** \`${tagName}\`
+            **Source Branch:** \`${sourceBranch}\`
+            **Target Branch:** \`main\`
+            
+            ### ❌ Automatic merge failed due to conflicts
+            
+            The automated merge of tag \`${tagName}\` to \`main\` failed due to merge conflicts.
+            
+            **Conflicting files:**
+            \`\`\`
+            ${conflictFiles}
+            \`\`\`
+            
+            ### 🔧 Manual Resolution Required
+            
+            Please resolve this conflict manually:
+            
+            1. **Checkout main branch:**
+               \`\`\`bash
+               git checkout main
+               git pull origin main
+               \`\`\`
+            
+            2. **Merge the tag:**
+               \`\`\`bash
+               git merge ${tagName}
+               \`\`\`
+            
+            3. **Resolve conflicts in the listed files**
+            
+            4. **Complete the merge:**
+               \`\`\`bash
+               git add .
+               git commit -m "chore: resolve conflicts for tag ${tagName} merge to main"
+               git push origin main
+               \`\`\`
+            
+            ### 📋 Checklist
+            - [ ] Conflicts resolved
+            - [ ] Tests passing
+            - [ ] Changes pushed to main
+            - [ ] Close this issue
+            
+            **Triggered by:** ${context.actor}
+            **Workflow:** [${context.workflow}](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Merge Conflict: Tag ${tagName} → main`,
+              body: issueBody,
+              labels: ['merge-conflict', 'urgent', 'auto-merge']
+            });
+      
+      - name: Success notification
+        if: steps.check-main.outputs.main_exists == 'true' && steps.merge-attempt.outputs.merge_success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tagName = '${{ steps.tag-info.outputs.tag_name }}';
+            const sourceBranch = '${{ steps.tag-info.outputs.source_branch }}';
+            
+            // Optional: Create a success issue or comment
+            console.log(`✅ Successfully merged tag ${tagName} from ${sourceBranch} to main`);
+            
+            // You can uncomment this to create a success notification issue
+            /*
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `✅ Auto-merge Success: Tag ${tagName} → main`,
+              body: `Tag \`${tagName}\` has been successfully merged to \`main\` branch.`,
+              labels: ['auto-merge', 'success']
+            });
+            */
+      
+      - name: Workflow summary
+        run: |
+          echo "## 📋 Auto-merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.tag-info.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Source Branch:** ${{ steps.tag-info.outputs.source_branch }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check-main.outputs.main_exists }}" == "true" ]; then
+            if [ "${{ steps.merge-attempt.outputs.merge_success }}" == "true" ]; then
+              echo "**Status:** ✅ Successfully merged to main" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "**Status:** ❌ Merge failed - conflicts detected" >> $GITHUB_STEP_SUMMARY
+              echo "**Conflicting files:**" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "${{ steps.merge-attempt.outputs.conflict_files }}" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "**Status:** ⚠️ Main branch does not exist" >> $GITHUB_STEP_SUMMARY
+          fi
