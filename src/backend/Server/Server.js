@@ -23,6 +23,15 @@ export default class Server {
       // Initialize specialized service classes
       this.compressor = new Compressor(this.videoDatabase, workdir);
       this.monitoring = new Monitoring(workdir);
+      
+      // Connection monitoring
+      this.activeConnections = new Map();
+      this.connectionStats = {
+         total: 0,
+         active: 0,
+         videoStreams: 0,
+         maxConcurrent: 0
+      };
    }
 
    async start() {
@@ -106,8 +115,13 @@ export default class Server {
        */
       app.get('/video/:id/stream', (req, res) => {
          const videoId = req.params.id;
+         const connectionId = `stream-${videoId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+         
+         // Track this connection
+         this.trackConnection(connectionId, 'video-stream', req);
 
          if (!this.videoDatabase.has(videoId)) {
+            this.closeConnection(connectionId);
             return res.status(404).json({
                error: 'Video not found',
                message: `No video found with ID: ${videoId}`,
@@ -128,6 +142,15 @@ export default class Server {
          const fileSize = stat.size;
          const range = req.headers.range;
 
+         // Handle connection cleanup when client disconnects
+         req.on('close', () => {
+            this.closeConnection(connectionId);
+         });
+
+         res.on('finish', () => {
+            this.closeConnection(connectionId);
+         });
+
          if (range) {
             // Handle range requests for video seeking
             const parts = range.replace(/bytes=/, '').split('-');
@@ -135,6 +158,11 @@ export default class Server {
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
             const chunksize = end - start + 1;
             const file = fs.createReadStream(videoPath, { start, end });
+            
+            file.on('error', () => {
+               this.closeConnection(connectionId);
+            });
+            
             const head = {
                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                'Accept-Ranges': 'bytes',
@@ -145,12 +173,18 @@ export default class Server {
             file.pipe(res);
          } else {
             // Stream entire file
+            const file = fs.createReadStream(videoPath);
+            
+            file.on('error', () => {
+               this.closeConnection(connectionId);
+            });
+            
             const head = {
                'Content-Length': fileSize,
                'Content-Type': 'video/mp4',
             };
             res.writeHead(200, head);
-            fs.createReadStream(videoPath).pipe(res);
+            file.pipe(res);
          }
       });
 
@@ -369,6 +403,26 @@ export default class Server {
          }
       });
 
+      /**
+       * GET /connections - Get current connection statistics
+       */
+      app.get('/connections', (req, res) => {
+         try {
+            const stats = this.getConnectionStats();
+            res.json({
+               success: true,
+               data: stats
+            });
+         } catch (error) {
+            console.error('Error getting connection stats:', error);
+            res.status(500).json({
+               success: false,
+               error: 'Failed to get connection statistics',
+               message: error.message
+            });
+         }
+      });
+
       // Health check endpoint
       app.get('/health', (req, res) => {
          res.json({
@@ -423,10 +477,65 @@ export default class Server {
             console.log('  GET  /compressed       - List compressed videos');
             console.log('  GET  /monitoring/files - Generate file monitoring report');
             console.log('  GET  /monitoring/files/json - Get latest monitoring data');
+            console.log('  GET  /connections     - Get connection statistics');
          });
       } catch (err) {
          console.error('Failed to start server:', err);
          process.exit(1);
       }
+   }
+
+   trackConnection(connectionId, type, req) {
+      const connection = {
+         id: connectionId,
+         type: type,
+         startTime: Date.now(),
+         clientIP: req.ip || req.connection.remoteAddress,
+         userAgent: req.get('User-Agent')
+      };
+      
+      this.activeConnections.set(connectionId, connection);
+      this.connectionStats.total++;
+      this.connectionStats.active = this.activeConnections.size;
+      
+      if (type === 'video-stream') {
+         this.connectionStats.videoStreams++;
+      }
+      
+      if (this.connectionStats.active > this.connectionStats.maxConcurrent) {
+         this.connectionStats.maxConcurrent = this.connectionStats.active;
+      }
+      
+      console.log(`🔗 New ${type} connection: ${connectionId} from ${connection.clientIP} (Active: ${this.connectionStats.active})`);
+      
+      return connectionId;
+   }
+
+   closeConnection(connectionId) {
+      if (this.activeConnections.has(connectionId)) {
+         const connection = this.activeConnections.get(connectionId);
+         const duration = Date.now() - connection.startTime;
+         
+         this.activeConnections.delete(connectionId);
+         this.connectionStats.active = this.activeConnections.size;
+         
+         if (connection.type === 'video-stream') {
+            this.connectionStats.videoStreams--;
+         }
+         
+         console.log(`✅ Connection closed: ${connectionId} (Duration: ${duration}ms, Active: ${this.connectionStats.active})`);
+      }
+   }
+
+   getConnectionStats() {
+      return {
+         ...this.connectionStats,
+         connections: Array.from(this.activeConnections.values()).map(conn => ({
+            id: conn.id,
+            type: conn.type,
+            duration: Date.now() - conn.startTime,
+            clientIP: conn.clientIP
+         }))
+      };
    }
 }

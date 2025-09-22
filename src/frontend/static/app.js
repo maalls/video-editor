@@ -8,6 +8,13 @@ class VideoLibraryApp {
       this.filteredVideos = [];
       this.isLoading = false;
       this.uiBuilder = new UiBuilder();
+      
+      // Server connection monitoring (display only)
+      this.serverConnectionStats = {
+         active: 0,
+         total: 0,
+         maxConcurrent: 0
+      };
 
       this.configuration = {
          timeline: {
@@ -56,11 +63,14 @@ class VideoLibraryApp {
    }
 
    async start() {
-      // Create Bootstrap header with robot logo
+      // Create Bootstrap header with robot logo and connection monitor
       const header = this.uiBuilder.createTag('header');
       header.className = 'bg-primary text-white text-center';
       header.innerHTML = `
-         <div class="container-fluid d-flex justify-content-end pe-1">
+         <div class="container-fluid d-flex justify-content-between align-items-center pe-1">
+            <div id="connection-monitor" class="small opacity-75" title="Real-time server connection monitoring">
+               <span class="badge bg-secondary">Server: 0 active</span>
+            </div>
             <div>
                <small class="opacity-75">Video Editor AI Interface</small>
             </div>
@@ -76,7 +86,7 @@ class VideoLibraryApp {
             top: {
                element: this.uiBuilder.createTag('div', null, 'top'),
                childrens: {
-                  display: {
+                  player: {
                      element: this.createDisplay(),
                   },
                },
@@ -119,6 +129,25 @@ class VideoLibraryApp {
             window.addEventListener('unhandledrejection', event => {
                console.error('🚨 Unhandled Promise Rejection:', event.reason);
             });
+
+            // Clean up resources when page is about to be closed
+            window.addEventListener('beforeunload', () => {
+               this.cleanupVideoResources();
+            });
+
+            // Clean up when page becomes hidden (mobile/tab switching)
+            document.addEventListener('visibilitychange', () => {
+               if (document.hidden) {
+                  const player = this.getPlayer();
+                  if (player && !player.paused) {
+                     player.pause();
+                     console.log('🔇 Paused video due to page visibility change');
+                  }
+               }
+            });
+
+            // Initialize connection monitoring
+            this.fetchServerConnectionStats();
 
             // Console styling
          }
@@ -224,8 +253,8 @@ class VideoLibraryApp {
 
    displayClip(video, start = true) {
       
-      this.loadVideoSource(video);
-      this.currentVideo = video;
+      this.updatePlayer(video);
+      
    }
 
    createDisplay() {
@@ -255,32 +284,37 @@ class VideoLibraryApp {
          videoPlayer.addEventListener('loadeddata', () => {
             // Show video when data is loaded (for normal video display, not timeline seeks)
             if (!this.isSeeking) {
-               this.getDisplay().poster = '';
-               this.getDisplay().style.visibility = 'visible';
+               this.getPlayer().poster = '';
+               this.getPlayer().style.visibility = 'visible';
             }
          });
          return videoPlayer;
    }
 
-   getDisplay() {
-      return this.app.childrens.top.childrens.display.element;
-   }
+   
 
-   loadVideoSource(video) {
-      // Clear existing sources
-      const player = this.app.childrens.top.childrens.display.element;
-      console.log("player", player);
+   updatePlayer(video) {
+      // Clear existing sources and properly clean up resources
+      const player = this.getPlayer();
+      
+      // Pause and reset current video to free up buffer space
+      player.pause();
+      player.currentTime = 0;
+      
+      // Remove existing sources and clean up URLs
       const existingSources = player.querySelectorAll('source');
-      existingSources.forEach(source => source.remove());
-      // Create a black poster to prevent visual glitch during loading
-      /*const canvas = document.createElement('canvas');
-      canvas.width = 1920;
-      canvas.height = 1080;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      player.poster = canvas.toDataURL();
-      */
+      existingSources.forEach(source => {
+         // Revoke blob URLs if they exist to free memory
+         if (source.src && source.src.startsWith('blob:')) {
+            URL.revokeObjectURL(source.src);
+         }
+         source.remove();
+      });
+      
+      // Clear src attribute to fully reset the video element
+      player.removeAttribute('src');
+      player.load(); // This clears the current resource
+      
       // Create new source
       const source = this.uiBuilder.createTag('source', '', 'video-source');
       source.setAttribute('src', `/video/${video.filename}/stream`);
@@ -291,7 +325,83 @@ class VideoLibraryApp {
       // Load the new video
       player.load();
       
+      console.log(`📼 Updated player source: ${video.filename}`);
+
+      this.currentVideo = video;
       console.log(`📼 Loaded video source: ${video.filename}`);
+
+      return player;
+   }
+
+   updateConnectionDisplay(serverStats = null) {
+      const stats = serverStats || this.serverConnectionStats;
+      const monitor = document.getElementById('connection-monitor');
+      if (monitor) {
+         const badge = monitor.querySelector('.badge');
+         if (badge) {
+            badge.textContent = `Server: ${stats.active} active`;
+            
+            // Color coding based on connection count
+            badge.className = 'badge ' + (
+               stats.active === 0 ? 'bg-secondary' :
+               stats.active <= 2 ? 'bg-success' :
+               stats.active <= 5 ? 'bg-warning' : 'bg-danger'
+            );
+         }
+      }
+   }
+
+   async fetchServerConnectionStats() {
+      try {
+         const response = await fetch(`${this.apiBaseUrl}/connections`);
+         const data = await response.json();
+         
+         if (data.success) {
+            console.log('🌐 Server Connection Stats:', data.data);
+            
+            // Update local stats and UI
+            this.serverConnectionStats = data.data;
+            this.updateConnectionDisplay(data.data);
+            
+            // Update tooltip with detailed info
+            const monitor = document.getElementById('connection-monitor');
+            if (monitor) {
+               monitor.title = `Active: ${data.data.active}, Total: ${data.data.total}, Max Concurrent: ${data.data.maxConcurrent}, Video Streams: ${data.data.videoStreams}`;
+            }
+            
+            return data.data;
+         }
+      } catch (error) {
+         console.error('Failed to fetch server connection stats:', error);
+      }
+      return null;
+   }
+
+   cleanupVideoResources() {
+      // Method to clean up video resources and prevent memory leaks
+      const player = this.getPlayer();
+      if (player) {
+         player.pause();
+         player.currentTime = 0;
+         
+         // Clean up all sources
+         const sources = player.querySelectorAll('source');
+         sources.forEach(source => {
+            if (source.src && source.src.startsWith('blob:')) {
+               URL.revokeObjectURL(source.src);
+            }
+            source.remove();
+         });
+         
+         player.removeAttribute('src');
+         player.load();
+         
+         console.log('🧹 Video resources cleaned up');
+      }
+   }
+
+   getPlayer() {
+      return this.app.childrens.top.childrens.player.element;
    }
 
    updatePlayheadPosition(currentTime, currentVideo) {
@@ -359,7 +469,7 @@ class VideoLibraryApp {
       this.seekToVideoPosition(clickedVideo, progressInVideo, videoIndex);
       
       console.log(`Timeline clicked: Video ${videoIndex} (${clickedVideo.filename}) at ${(progressInVideo * 100).toFixed(1)}%`);
-      console.log('🔄 Browser auto-reload test - this should trigger a refresh');
+      
    }
    
    showDebugInfo(message, duration = 3000) {
@@ -400,7 +510,7 @@ class VideoLibraryApp {
       this.displayClip(video, false);
       
       // Use the single reusable video element
-      const videoElement = this.getDisplay();
+      const videoElement = this.getPlayer();
       if (!videoElement) {
          console.error('Video element not found');
          return;
@@ -672,3 +782,10 @@ setInterval(() => {
       app.checkServerStatus();
    }
 }, 300000);
+
+// Monitor connections every 10 seconds
+setInterval(() => {
+   if (app) {
+      app.fetchServerConnectionStats();
+   }
+}, 10000);
