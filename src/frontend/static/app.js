@@ -77,7 +77,7 @@ class VideoLibraryApp {
                element: this.uiBuilder.createTag('div', null, 'top'),
                childrens: {
                   display: {
-                     element: this.uiBuilder.createTag('div', null, 'display'),
+                     element: this.createDisplay(),
                   },
                },
             },
@@ -163,7 +163,7 @@ class VideoLibraryApp {
    async loadEditor() {
       const ratio = 1920 / 1080;
       const height = this.configuration.timeline.height;
-      const width = height * ratio;
+      const width = Math.round(height * ratio);
       const dom = this.dom('main');
       
       // Create timeline playhead
@@ -223,61 +223,73 @@ class VideoLibraryApp {
    }
 
    displayClip(video, start = true) {
+      
+      this.loadVideoSource(video);
+      this.currentVideo = video;
+   }
+
+   createDisplay() {
       const ratio = 1920 / 1080;
       const height = 300;
       const width = height * ratio;
-      const display = this.app.childrens.top.childrens.display.element;
-
-      // Create video element only once
-      if (!this.videoElement) {
-         this.videoElement = this.uiBuilder.createTag('video', '', 'video main-video-player');
-         this.videoElement.setAttribute('id', 'main-video-player');
-         this.videoElement.setAttribute('class', 'video');
-         this.videoElement.setAttribute('controls', '');
-         this.videoElement.setAttribute('preload', 'meta');
-         this.videoElement.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
+      const videoPlayer = this.uiBuilder.createTag('video', '', 'video main-video-player');
+         videoPlayer.setAttribute('id', 'main-video-player');
+         videoPlayer.setAttribute('class', 'video');
+         videoPlayer.setAttribute('controls', '');
+         videoPlayer.setAttribute('preload', 'meta');
+         videoPlayer.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
          
          // Add event listeners only once
-         this.videoElement.addEventListener('timeupdate', () => {
+         videoPlayer.addEventListener('timeupdate', () => {
             // Only update playhead if we're not in the middle of a seek operation
             if (!this.isSeeking && this.currentVideo) {
-               this.updatePlayheadPosition(this.videoElement.currentTime, this.currentVideo);
+               this.updatePlayheadPosition(videoPlayer.currentTime, this.currentVideo);
             }
          });
          
-         this.videoElement.addEventListener('loadedmetadata', () => {
-            this.videoDuration = this.videoElement.duration;
+         videoPlayer.addEventListener('loadedmetadata', () => {
+            this.videoDuration = videoPlayer.duration;
             console.log('Video duration loaded:', this.videoDuration, 'for', this.currentVideo?.filename);
          });
 
-         // Ensure display container exists and append video element
-         if (display.innerHTML === '') {
-            display.append(this.videoElement);
-         }
-      }
+         videoPlayer.addEventListener('loadeddata', () => {
+            // Show video when data is loaded (for normal video display, not timeline seeks)
+            if (!this.isSeeking) {
+               this.getDisplay().poster = '';
+               this.getDisplay().style.visibility = 'visible';
+            }
+         });
+         return videoPlayer;
+   }
 
-      // Update the video source
-      this.loadVideoSource(video);
-      
-      // Store reference to current video for playhead sync
-      this.currentVideo = video;
-      this.currentVideoElement = this.videoElement;
+   getDisplay() {
+      return this.app.childrens.top.childrens.display.element;
    }
 
    loadVideoSource(video) {
       // Clear existing sources
-      const existingSources = this.videoElement.querySelectorAll('source');
+      const player = this.app.childrens.top.childrens.display.element;
+      console.log("player", player);
+      const existingSources = player.querySelectorAll('source');
       existingSources.forEach(source => source.remove());
-      
+      // Create a black poster to prevent visual glitch during loading
+      /*const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      player.poster = canvas.toDataURL();
+      */
       // Create new source
       const source = this.uiBuilder.createTag('source', '', 'video-source');
       source.setAttribute('src', `/video/${video.filename}/stream`);
       source.setAttribute('type', 'video/mp4');
       
-      this.videoElement.append(source);
+      player.append(source);
       
       // Load the new video
-      this.videoElement.load();
+      player.load();
       
       console.log(`📼 Loaded video source: ${video.filename}`);
    }
@@ -303,7 +315,7 @@ class VideoLibraryApp {
       
       this.playhead.style.left = `${absolutePosition}px`;
       
-      console.log(`Playhead: ${currentTime.toFixed(2)}s / ${this.videoDuration.toFixed(2)}s at position ${absolutePosition}px`);
+      //console.log(`Playhead: ${currentTime.toFixed(2)}s / ${this.videoDuration.toFixed(2)}s at position ${absolutePosition}px`);
    }
 
    calculateTimelineWidth() {
@@ -334,19 +346,20 @@ class VideoLibraryApp {
       // Calculate progress within the clicked video (0 to 1)
       const progressInVideo = positionInVideo / videoWidth;
       
-      // Update playhead position immediately
-      this.playhead.style.left = `${clickX}px`;
-      
       // Get the clicked video
       const clickedVideo = this.project.dailies[videoIndex];
       
       // Show visual debug info
       this.showDebugInfo(`🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px`);
       
+      // Store the target playhead position for later
+      this.targetPlayheadPosition = clickX;
+      
       // Load and seek to the clicked video position
       this.seekToVideoPosition(clickedVideo, progressInVideo, videoIndex);
       
       console.log(`Timeline clicked: Video ${videoIndex} (${clickedVideo.filename}) at ${(progressInVideo * 100).toFixed(1)}%`);
+      console.log('🔄 Browser auto-reload test - this should trigger a refresh');
    }
    
    showDebugInfo(message, duration = 3000) {
@@ -387,7 +400,7 @@ class VideoLibraryApp {
       this.displayClip(video, false);
       
       // Use the single reusable video element
-      const videoElement = this.videoElement;
+      const videoElement = this.getDisplay();
       if (!videoElement) {
          console.error('Video element not found');
          return;
@@ -395,7 +408,13 @@ class VideoLibraryApp {
       
       // Store the target progress for when the video is ready
       const targetProgress = progress;
-      
+
+      const performSeekAndPlay = async () => {
+
+         const targetTime = targetProgress * videoElement.duration;
+         console.log('target time', targetTime);
+      }
+      /*
       const performSeekAndPlay = async () => {
          try {
             // Set seeking flag to prevent playhead updates during seek
@@ -412,7 +431,17 @@ class VideoLibraryApp {
                const onSeeked = () => {
                   videoElement.removeEventListener('seeked', onSeeked);
                   console.log(`✅ Seek completed to ${videoElement.currentTime.toFixed(2)}s`);
-                  this.showDebugInfo(`✅ Seeked to: ${videoElement.currentTime.toFixed(2)}s\n🎬 Ready to play from this position`);
+                  //this.showDebugInfo(`✅ Seeked to: ${videoElement.currentTime.toFixed(2)}s\n🎬 Ready to play from this position`);
+                  
+                  // Remove poster and show video now that seek is complete
+                  videoElement.poster = '';
+                  videoElement.style.visibility = 'visible';
+                  
+                  // Update playhead position now that seek is complete
+                  if (this.targetPlayheadPosition !== undefined && this.playhead) {
+                     this.playhead.style.left = `${this.targetPlayheadPosition}px`;
+                     this.targetPlayheadPosition = undefined; // Clear the target
+                  }
                   
                   // Clear seeking flag after a short delay to allow the video to stabilize
                   setTimeout(() => {
@@ -444,7 +473,7 @@ class VideoLibraryApp {
             console.error('Error in seekToVideoPosition:', error);
             this.isSeeking = false; // Make sure to clear the flag on error
          }
-      };
+      }; */
       
       // Check if video metadata is already loaded
       if (videoElement.readyState >= HTMLMediaElement.HAVE_METADATA) {
