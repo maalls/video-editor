@@ -1,7 +1,7 @@
-import Server from './src/backend/Server/Server.js';
+import MultiProjectServer from './src/backend/Server/MultiProjectServer.js';
 
-const videoPath = `/Users/malo/Sites/video-editor/playground/var/sample/videos/`;
+const videoPath = `/Users/malo/Sites/video-editor/playground/var/work/legacy-project/dailies/`;
 const workdir = `/Users/malo/Sites/video-editor/playground/var/work`;
 
-const server = new Server(videoPath, workdir);
+const server = new MultiProjectServer(videoPath, workdir);
 server.start();
