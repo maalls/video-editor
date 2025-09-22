@@ -8,12 +8,12 @@ class VideoLibraryApp {
       this.filteredVideos = [];
       this.isLoading = false;
       this.uiBuilder = new UiBuilder();
-      
+
       // Server connection monitoring (display only)
       this.serverConnectionStats = {
          active: 0,
          total: 0,
-         maxConcurrent: 0
+         maxConcurrent: 0,
       };
 
       this.configuration = {
@@ -87,7 +87,7 @@ class VideoLibraryApp {
                element: this.uiBuilder.createTag('div', null, 'top'),
                childrens: {
                   player: {
-                     element: this.createDisplay(),
+                     element: this.createPlayer(),
                   },
                },
             },
@@ -183,9 +183,7 @@ class VideoLibraryApp {
 
    async loadDisplay() {
       if (this.project.dailies.length) {
-         const filename = this.project.dailies[0].filename;
-         console.log('loadDisplay', filename);
-         this.displayClip(this.project.dailies[0]);
+         this.putPlayer(this.project.dailies[0]);
       }
    }
 
@@ -194,17 +192,17 @@ class VideoLibraryApp {
       const height = this.configuration.timeline.height;
       const width = Math.round(height * ratio);
       const dom = this.dom('main');
-      
+
       // Create timeline playhead
       this.playhead = this.uiBuilder.createTag('div', '', 'timeline-playhead');
       this.playhead.style.left = '20px'; // Initial position (accounting for padding)
       dom.element.appendChild(this.playhead);
-      
+
       // Add click interaction to timeline
-      dom.element.addEventListener('click', (event) => {
+      dom.element.addEventListener('click', event => {
          this.handleTimelineClick(event);
       });
-      
+
       for (const video of this.project.dailies) {
          // Create enhanced video player UI
          console.log('Creating video player for:', video.filename);
@@ -234,7 +232,7 @@ class VideoLibraryApp {
 
          imageTag.addEventListener('click', event => {
             console.log('🤖 AI Processing:', video.filename, imageTag.src);
-            this.displayClip(video);
+            this.putPlayer(video);
          });
 
          videoContainer.append(imageTag, robotOverlay);
@@ -251,84 +249,106 @@ class VideoLibraryApp {
       }
    }
 
-   displayClip(video, start = true) {
-      
-      this.updatePlayer(video);
-      
-   }
-
-   createDisplay() {
+   createPlayer() {
       const ratio = 1920 / 1080;
       const height = 300;
       const width = height * ratio;
       const videoPlayer = this.uiBuilder.createTag('video', '', 'video main-video-player');
-         videoPlayer.setAttribute('id', 'main-video-player');
-         videoPlayer.setAttribute('class', 'video');
-         videoPlayer.setAttribute('controls', '');
-         videoPlayer.setAttribute('preload', 'meta');
-         videoPlayer.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
-         
-         // Add event listeners only once
-         videoPlayer.addEventListener('timeupdate', () => {
-            // Only update playhead if we're not in the middle of a seek operation
-            if (!this.isSeeking && this.currentVideo) {
-               this.updatePlayheadPosition(videoPlayer.currentTime, this.currentVideo);
-            }
-         });
-         
-         videoPlayer.addEventListener('loadedmetadata', () => {
-            this.videoDuration = videoPlayer.duration;
-            console.log('Video duration loaded:', this.videoDuration, 'for', this.currentVideo?.filename);
-         });
+      videoPlayer.setAttribute('id', 'main-video-player');
+      videoPlayer.setAttribute('class', 'video');
+      videoPlayer.setAttribute('controls', '');
+      videoPlayer.setAttribute('preload', 'meta');
+      videoPlayer.setAttribute(
+         'style',
+         `width: ${width}px; height: ${height}px; background: #000;`
+      );
 
-         videoPlayer.addEventListener('loadeddata', () => {
-            // Show video when data is loaded (for normal video display, not timeline seeks)
-            if (!this.isSeeking) {
-               this.getPlayer().poster = '';
-               this.getPlayer().style.visibility = 'visible';
-            }
-         });
-         return videoPlayer;
+      // Add event listeners only once
+      videoPlayer.addEventListener('timeupdate', () => {
+         // Only update playhead if we're not in the middle of a seek operation
+         if (!this.isSeeking && this.currentVideo) {
+            //console.log('updating playhead', videoPlayer.currentTime);
+            this.updatePlayheadPosition(videoPlayer.currentTime);
+         }
+      });
+
+      videoPlayer.addEventListener('loadedmetadata', () => {
+         this.videoDuration = videoPlayer.duration;
+         console.log(
+            'Video duration loaded:',
+            this.videoDuration,
+            'for',
+            this.currentVideo?.filename
+         );
+      });
+
+      videoPlayer.addEventListener('loadeddata', () => {
+         // Show video when data is loaded (for normal video display, not timeline seeks)
+         if (!this.isSeeking) {
+            this.getPlayer().poster = '';
+            this.getPlayer().style.visibility = 'visible';
+         }
+      });
+      return videoPlayer;
    }
 
-   
+   putPlayer(video) {
+      if (video.filename === this.currentVideo?.filename) {
+         console.log('Video already loaded:', video.filename);
+         return this.getPlayer();
+      }
+      const player = this.setPlayer(video);
 
-   updatePlayer(video) {
-      // Clear existing sources and properly clean up resources
+      return player;
+   }
+
+   setPlayer(video) {
+      console.log('Loading video into player:', video.filename);
       const player = this.getPlayer();
-      
-      // Pause and reset current video to free up buffer space
-      player.pause();
-      player.currentTime = 0;
-      
-      // Remove existing sources and clean up URLs
-      const existingSources = player.querySelectorAll('source');
-      existingSources.forEach(source => {
-         // Revoke blob URLs if they exist to free memory
-         if (source.src && source.src.startsWith('blob:')) {
-            URL.revokeObjectURL(source.src);
-         }
-         source.remove();
-      });
-      
-      // Clear src attribute to fully reset the video element
-      player.removeAttribute('src');
-      player.load(); // This clears the current resource
-      
-      // Create new source
-      const source = this.uiBuilder.createTag('source', '', 'video-source');
-      source.setAttribute('src', `/video/${video.filename}/stream`);
-      source.setAttribute('type', 'video/mp4');
-      
-      player.append(source);
-      
-      // Load the new video
+      if (!player) {
+         console.error('Video element not found');
+         return;
+      }
+
+      // Clean up previous video resources
+      this.cleanupVideoResources();
+
+      // Set poster while loading
+      player.poster = 'work/thumbnails/' + video.filename.replace('.MP4', '.jpg');
+      player.style.visibility = 'hidden'; // Hide until ready
+
+      // Set new source
+      const source = this.uiBuilder.createTag('source');
+      source.src = 'work/dailies/' + video.filename;
+      source.type = 'video/mp4';
+
+      player.appendChild(source);
       player.load();
-      
-      console.log(`📼 Updated player source: ${video.filename}`);
 
       this.currentVideo = video;
-      console.log(`📼 Loaded video source: ${video.filename}`);
+      this.videoDuration = 0; // Reset duration until loaded
+
+      // Attempt to play the video, handling autoplay restrictions
+      const tryPlay = async () => {
+         try {
+            await player.play();
+            console.log('✅ Playing video:', video.filename);
+         } catch (error) {
+            console.warn('❌ Auto-play failed, showing play button:', error);
+            this.showPlayButton(player, video.filename);
+         }
+      };
+
+      // Wait for metadata to load before trying to play
+      if (player.readyState >= HTMLMediaElement.HAVE_METADATA) {
+         tryPlay();
+      } else {
+         const onLoadedMetadata = () => {
+            player.removeEventListener('loadedmetadata', onLoadedMetadata);
+            tryPlay();
+         };
+         player.addEventListener('loadedmetadata', onLoadedMetadata);
+      }
 
       return player;
    }
@@ -340,13 +360,17 @@ class VideoLibraryApp {
          const badge = monitor.querySelector('.badge');
          if (badge) {
             badge.textContent = `Server: ${stats.active} active`;
-            
+
             // Color coding based on connection count
-            badge.className = 'badge ' + (
-               stats.active === 0 ? 'bg-secondary' :
-               stats.active <= 2 ? 'bg-success' :
-               stats.active <= 5 ? 'bg-warning' : 'bg-danger'
-            );
+            badge.className =
+               'badge ' +
+               (stats.active === 0
+                  ? 'bg-secondary'
+                  : stats.active <= 2
+                    ? 'bg-success'
+                    : stats.active <= 5
+                      ? 'bg-warning'
+                      : 'bg-danger');
          }
       }
    }
@@ -355,20 +379,20 @@ class VideoLibraryApp {
       try {
          const response = await fetch(`${this.apiBaseUrl}/connections`);
          const data = await response.json();
-         
+
          if (data.success) {
             console.log('🌐 Server Connection Stats:', data.data);
-            
+
             // Update local stats and UI
             this.serverConnectionStats = data.data;
             this.updateConnectionDisplay(data.data);
-            
+
             // Update tooltip with detailed info
             const monitor = document.getElementById('connection-monitor');
             if (monitor) {
                monitor.title = `Active: ${data.data.active}, Total: ${data.data.total}, Max Concurrent: ${data.data.maxConcurrent}, Video Streams: ${data.data.videoStreams}`;
             }
-            
+
             return data.data;
          }
       } catch (error) {
@@ -379,11 +403,12 @@ class VideoLibraryApp {
 
    cleanupVideoResources() {
       // Method to clean up video resources and prevent memory leaks
+      console.log('🧹 Cleaning up video resources...');
       const player = this.getPlayer();
       if (player) {
          player.pause();
          player.currentTime = 0;
-         
+
          // Clean up all sources
          const sources = player.querySelectorAll('source');
          sources.forEach(source => {
@@ -392,10 +417,10 @@ class VideoLibraryApp {
             }
             source.remove();
          });
-         
+
          player.removeAttribute('src');
          player.load();
-         
+
          console.log('🧹 Video resources cleaned up');
       }
    }
@@ -404,27 +429,30 @@ class VideoLibraryApp {
       return this.app.childrens.top.childrens.player.element;
    }
 
-   updatePlayheadPosition(currentTime, currentVideo) {
+   updatePlayheadPosition() {
       if (!this.playhead || !this.videoDuration) return;
-      
+
+      const videoElement = this.getPlayer();
+      const currentTime = videoElement.currentTime;
+      const currentVideo = this.currentVideo;
       // Calculate the total timeline width
       const timelineWidth = this.calculateTimelineWidth();
       const paddingLeft = 20; // Timeline padding
-      
+
       // For now, we'll show the playhead position relative to the current video
       // In a full timeline implementation, you'd need to calculate based on all videos
       const videoIndex = this.project.dailies.findIndex(v => v.filename === currentVideo.filename);
       const videoWidth = this.configuration.timeline.height * (1920 / 1080);
-      
+
       // Calculate position within the current video thumbnail
       const progressWithinVideo = currentTime / this.videoDuration;
       const positionWithinVideo = progressWithinVideo * videoWidth;
-      
+
       // Calculate absolute position in timeline
-      const absolutePosition = paddingLeft + (videoIndex * videoWidth) + positionWithinVideo;
-      
+      const absolutePosition = paddingLeft + videoIndex * videoWidth + positionWithinVideo;
+
       this.playhead.style.left = `${absolutePosition}px`;
-      
+
       //console.log(`Playhead: ${currentTime.toFixed(2)}s / ${this.videoDuration.toFixed(2)}s at position ${absolutePosition}px`);
    }
 
@@ -434,49 +462,54 @@ class VideoLibraryApp {
    }
 
    handleTimelineClick(event) {
+      console.log('Timeline clicked at', event.clientX, event.clientY);
+
       // Don't handle clicks on the playhead itself
       if (event.target.classList.contains('timeline-playhead')) return;
-      
+
       const timeline = event.currentTarget;
       const rect = timeline.getBoundingClientRect();
       const clickX = event.clientX - rect.left;
       const paddingLeft = 20; // Timeline padding
-      
+
       // Calculate which video and position within that video
       const videoWidth = this.configuration.timeline.height * (1920 / 1080);
       const relativeClickX = clickX - paddingLeft;
-      
+
       if (relativeClickX < 0) return; // Clicked in padding area
-      
+
       const videoIndex = Math.floor(relativeClickX / videoWidth);
       const positionInVideo = relativeClickX % videoWidth;
-      
+
       if (videoIndex >= this.project.dailies.length) return; // Clicked beyond videos
-      
+
       // Calculate progress within the clicked video (0 to 1)
       const progressInVideo = positionInVideo / videoWidth;
-      
+
       // Get the clicked video
       const clickedVideo = this.project.dailies[videoIndex];
-      
+
       // Show visual debug info
-      this.showDebugInfo(`🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px`);
-      
+      this.showDebugInfo(
+         `🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px`
+      );
+
       // Store the target playhead position for later
       this.targetPlayheadPosition = clickX;
-      
+
       // Load and seek to the clicked video position
       this.seekToVideoPosition(clickedVideo, progressInVideo, videoIndex);
-      
-      console.log(`Timeline clicked: Video ${videoIndex} (${clickedVideo.filename}) at ${(progressInVideo * 100).toFixed(1)}%`);
-      
+
+      console.log(
+         `Timeline clicked: Video ${videoIndex} (${clickedVideo.filename}) at ${(progressInVideo * 100).toFixed(1)}%`
+      );
    }
-   
+
    showDebugInfo(message, duration = 3000) {
       // Remove existing debug info
       const existingDebug = document.querySelector('.debug-info');
       if (existingDebug) existingDebug.remove();
-      
+
       // Create debug info display
       const debugDiv = document.createElement('div');
       debugDiv.className = 'debug-info';
@@ -494,9 +527,9 @@ class VideoLibraryApp {
          max-width: 300px;
       `;
       debugDiv.textContent = message;
-      
+
       document.body.appendChild(debugDiv);
-      
+
       // Auto-remove after 3 seconds
       setTimeout(() => {
          if (debugDiv.parentElement) {
@@ -507,23 +540,33 @@ class VideoLibraryApp {
 
    seekToVideoPosition(video, progress, videoIndex) {
       // First, display the clicked video (loads new source)
-      this.displayClip(video, false);
-      
+      this.putPlayer(video, false);
+
       // Use the single reusable video element
       const videoElement = this.getPlayer();
       if (!videoElement) {
          console.error('Video element not found');
          return;
       }
-      
+
       // Store the target progress for when the video is ready
       const targetProgress = progress;
 
-      const performSeekAndPlay = async () => {
+      this.playhead.style.left = `${this.targetPlayheadPosition}px`;
 
-         const targetTime = targetProgress * videoElement.duration;
-         console.log('target time', targetTime);
-      }
+      const targetTime = targetProgress * video.info.ffprob.video.duration;
+      console.log('duration', video.info.ffprob.video.duration);
+      console.log('target time', targetTime);
+      videoElement.currentTime = targetTime;
+
+      const performSeekAndPlay = async () => {
+         const targetTime = targetProgress * video.info.ffprob.video.duration;
+         console.log('info', video);
+         console.log('target time:', targetProgress, videoElement.duration, targetTime);
+         console.log(
+            `Seeking to ${targetTime.toFixed(2)}s in ${video.filename} (duration: ${videoElement.duration.toFixed(2)}s)`
+         );
+      };
       /*
       const performSeekAndPlay = async () => {
          try {
@@ -584,7 +627,7 @@ class VideoLibraryApp {
             this.isSeeking = false; // Make sure to clear the flag on error
          }
       }; */
-      
+
       // Check if video metadata is already loaded
       if (videoElement.readyState >= HTMLMediaElement.HAVE_METADATA) {
          performSeekAndPlay();
@@ -597,8 +640,9 @@ class VideoLibraryApp {
          videoElement.addEventListener('loadedmetadata', onLoadedMetadata);
       }
    }
-   
+
    showPlayButton(videoElement, filename) {
+      return;
       // Add a play button overlay if auto-play fails
       const playButton = document.createElement('div');
       playButton.innerHTML = '▶️ Click to Play';
@@ -619,41 +663,45 @@ class VideoLibraryApp {
          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
          transition: background-color 0.2s ease;
       `;
-      
+
       playButton.onmouseenter = () => {
          playButton.style.backgroundColor = 'rgba(0,0,0,0.9)';
       };
-      
+
       playButton.onmouseleave = () => {
          playButton.style.backgroundColor = 'rgba(0,0,0,0.8)';
       };
-      
+
       playButton.onclick = async () => {
          try {
             // Store current time before play to ensure it doesn't reset
             const currentTime = videoElement.currentTime;
             console.log(`🎬 Manual play from ${currentTime.toFixed(2)}s`);
-            
+
             await videoElement.play();
-            
+
             // Ensure the video is still at the correct time after play starts
             if (Math.abs(videoElement.currentTime - currentTime) > 0.5) {
-               console.log(`⚠️ Time jumped during play, correcting from ${videoElement.currentTime.toFixed(2)}s to ${currentTime.toFixed(2)}s`);
+               console.log(
+                  `⚠️ Time jumped during play, correcting from ${videoElement.currentTime.toFixed(2)}s to ${currentTime.toFixed(2)}s`
+               );
                videoElement.currentTime = currentTime;
             }
-            
+
             playButton.remove();
-            console.log(`✅ Manual play successful for ${filename} from ${currentTime.toFixed(2)}s`);
+            console.log(
+               `✅ Manual play successful for ${filename} from ${currentTime.toFixed(2)}s`
+            );
          } catch (error) {
             console.error('Manual play failed:', error);
          }
       };
-      
+
       // Ensure parent has relative positioning
       if (videoElement.parentElement) {
          videoElement.parentElement.style.position = 'relative';
          videoElement.parentElement.appendChild(playButton);
-         
+
          // Auto-remove after 10 seconds
          setTimeout(() => {
             if (playButton.parentElement) {

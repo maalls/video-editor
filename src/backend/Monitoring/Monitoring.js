@@ -11,16 +11,35 @@ export class Monitoring {
       this.excludePatterns = [
          'node_modules',
          '.git',
-         'var/sample',
          'var/work/compressed',
          '.DS_Store',
          'Thumbs.db',
-         '*.log'
+         '*.log',
       ];
       this.textExtensions = [
-         '.js', '.ts', '.json', '.html', '.css', '.md', '.txt', 
-         '.yml', '.yaml', '.xml', '.jsx', '.tsx', '.vue', '.py', 
-         '.java', '.cpp', '.c', '.h', '.php', '.rb', '.go', '.rs', '.sh'
+         '.js',
+         '.ts',
+         '.json',
+         '.html',
+         '.css',
+         '.md',
+         '.txt',
+         '.yml',
+         '.yaml',
+         '.xml',
+         '.jsx',
+         '.tsx',
+         '.vue',
+         '.py',
+         '.java',
+         '.cpp',
+         '.c',
+         '.h',
+         '.php',
+         '.rb',
+         '.go',
+         '.rs',
+         '.sh',
       ];
    }
 
@@ -29,11 +48,11 @@ export class Monitoring {
     */
    async generateFileReport() {
       console.log('🔍 Starting file monitoring scan...');
-      
+
       const projectRoot = this.workdir;
       const monitoringDir = path.join(projectRoot, 'var', 'data', 'monitoring');
       const outputFile = path.join(monitoringDir, 'filesizes.json');
-      
+
       // Ensure monitoring directory exists
       if (!fs.existsSync(monitoringDir)) {
          fs.mkdirSync(monitoringDir, { recursive: true });
@@ -46,15 +65,15 @@ export class Monitoring {
             totalFiles: 0,
             totalSize: 0,
             totalLines: 0,
-            directories: {}
+            directories: {},
          },
          files: [],
          summary: {
             byExtension: {},
             byDirectory: {},
             largestFiles: [],
-            mostLines: []
-         }
+            mostLines: [],
+         },
       };
 
       // Scan project files
@@ -65,7 +84,7 @@ export class Monitoring {
 
       // Write to JSON file
       fs.writeFileSync(outputFile, JSON.stringify(fileData, null, 2));
-      
+
       console.log(`📊 File report generated: ${outputFile}`);
       console.log(`📁 Scanned ${fileData.scan.totalFiles} files`);
       console.log(`💾 Total size: ${this.formatFileSize(fileData.scan.totalSize)}`);
@@ -76,7 +95,7 @@ export class Monitoring {
          totalFiles: fileData.scan.totalFiles,
          totalSize: fileData.scan.totalSize,
          totalSizeFormatted: this.formatFileSize(fileData.scan.totalSize),
-         totalLines: fileData.scan.totalLines
+         totalLines: fileData.scan.totalLines,
       };
    }
 
@@ -86,23 +105,23 @@ export class Monitoring {
    async scanDirectory(dirPath, fileData, relativePath) {
       try {
          const items = fs.readdirSync(dirPath);
-         
+
          for (const item of items) {
             const fullPath = path.join(dirPath, item);
             const relativeItemPath = path.join(relativePath, item);
-            
+
             // Skip excluded patterns
             if (this.isExcluded(relativeItemPath, item)) {
                continue;
             }
 
             const stats = fs.statSync(fullPath);
-            
+
             if (stats.isDirectory()) {
                fileData.scan.directories[relativeItemPath] = {
                   files: 0,
                   size: 0,
-                  lines: 0
+                  lines: 0,
                };
                await this.scanDirectory(fullPath, fileData, relativeItemPath);
             } else if (stats.isFile()) {
@@ -152,7 +171,7 @@ export class Monitoring {
          lines: 0,
          created: stats.ctime,
          modified: stats.mtime,
-         isText: false
+         isText: false,
       };
 
       // Check if file is text-based for line counting
@@ -161,7 +180,7 @@ export class Monitoring {
          try {
             const content = fs.readFileSync(fullPath, 'utf8');
             fileInfo.lines = content.split('\n').length;
-            
+
             // Additional analysis for code files
             if (['.js', '.ts', '.jsx', '.tsx'].includes(ext)) {
                fileInfo.language = 'JavaScript/TypeScript';
@@ -194,7 +213,7 @@ export class Monitoring {
                count: 0,
                totalSize: 0,
                totalLines: 0,
-               averageSize: 0
+               averageSize: 0,
             };
          }
          fileData.summary.byExtension[ext].count++;
@@ -217,7 +236,7 @@ export class Monitoring {
             fileData.summary.byDirectory[dir] = {
                count: 0,
                totalSize: 0,
-               totalLines: 0
+               totalLines: 0,
             };
          }
          fileData.summary.byDirectory[dir].count++;
@@ -232,7 +251,7 @@ export class Monitoring {
          .map(file => ({
             path: file.path,
             size: file.size,
-            sizeFormatted: file.sizeFormatted
+            sizeFormatted: file.sizeFormatted,
          }));
 
       // Find files with most lines
@@ -244,7 +263,7 @@ export class Monitoring {
             path: file.path,
             lines: file.lines,
             size: file.size,
-            sizeFormatted: file.sizeFormatted
+            sizeFormatted: file.sizeFormatted,
          }));
    }
 
@@ -253,8 +272,14 @@ export class Monitoring {
     */
    getLatestData() {
       try {
-         const monitoringFile = path.join(this.workdir, 'var', 'data', 'monitoring', 'filesizes.json');
-         
+         const monitoringFile = path.join(
+            this.workdir,
+            'var',
+            'data',
+            'monitoring',
+            'filesizes.json'
+         );
+
          if (!fs.existsSync(monitoringFile)) {
             return null;
          }
