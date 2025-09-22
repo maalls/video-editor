@@ -122,7 +122,8 @@ header img:hover {
 }
 
 /* App Layout with sticky footer */
-html, body {
+html,
+body {
    height: 100%;
 }
 
