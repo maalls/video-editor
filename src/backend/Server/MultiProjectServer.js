@@ -51,6 +51,12 @@ export default class MultiProjectServer {
    getProjectDatabase(projectSlug) {
       if (!this.projectDatabases.has(projectSlug)) {
          const projectDb = new ProjectDatabase(this.projectManager, projectSlug);
+         // Import videos if database is empty or doesn't exist
+         try {
+            projectDb.import();
+         } catch (error) {
+            console.warn(`Could not import videos for project ${projectSlug}:`, error.message);
+         }
          this.projectDatabases.set(projectSlug, projectDb);
       }
       return this.projectDatabases.get(projectSlug);

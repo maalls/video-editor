@@ -48,6 +48,46 @@ header .container-fluid h1 {
    letter-spacing: 1px;
 }
 
+/* Project Selector Styles */
+#project-selector {
+   gap: 15px;
+}
+
+#project-select {
+   background-color: rgba(255, 255, 255, 0.9);
+   border: 1px solid rgba(255, 255, 255, 0.3);
+   color: #333;
+   font-weight: 500;
+}
+
+#project-select:focus {
+   background-color: white;
+   border-color: rgba(255, 255, 255, 0.5);
+   box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+}
+
+#new-project-btn {
+   border: 1px solid rgba(255, 255, 255, 0.5);
+   transition: all 0.2s ease;
+}
+
+#new-project-btn:hover {
+   background-color: rgba(255, 255, 255, 0.1);
+   border-color: white;
+}
+
+.project-header {
+   background-color: rgba(0, 0, 0, 0.05);
+   padding: 15px;
+   border-radius: 8px;
+   border-left: 4px solid #007bff;
+}
+
+.project-info h6 {
+   margin-bottom: 5px;
+   color: #333;
+}
+
 header img {
    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
    transition: transform 0.3s ease;

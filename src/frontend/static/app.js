@@ -4,7 +4,10 @@ class VideoLibraryApp {
    constructor() {
       console.log('🚀 VideoLibraryApp constructor called');
       this.apiBaseUrl = 'http://localhost:3000';
-      this.project = null;
+      this.projects = []; // All available projects
+      this.currentProject = null; // Currently selected project
+      this.currentProjectSlug = null; // Currently selected project slug
+      this.project = null; // Legacy compatibility
       this.filteredVideos = [];
       this.isLoading = false;
       this.uiBuilder = new UiBuilder();
@@ -116,14 +119,31 @@ class VideoLibraryApp {
    }
 
    async start() {
-      // Create Bootstrap header with robot logo and connection monitor
+      // Create Bootstrap header with robot logo, project selector, and connection monitor
       const header = this.uiBuilder.createTag('header');
-      header.className = 'bg-primary text-white text-center';
+      header.className = 'bg-primary text-white';
       header.innerHTML = `
-         <div class="container-fluid d-flex justify-content-center align-items-center pe-1">
-            <div>
-               <h4 class="mb-0 text-white">🤖 Video Editor AI Interface</h4>
-               <small class="opacity-75">VIAI - Intelligent Video Processing</small>
+         <div class="container-fluid">
+            <div class="row align-items-center py-2">
+               <div class="col-md-3">
+                  <div class="d-flex align-items-center">
+                     <h5 class="mb-0 text-white">🤖 VIAI</h5>
+                     <small class="ms-2 opacity-75">Video Editor AI</small>
+                  </div>
+               </div>
+               <div class="col-md-6 text-center">
+                  <div id="project-selector" class="d-flex align-items-center justify-content-center gap-3">
+                     <select id="project-select" class="form-select form-select-sm" style="width: auto; min-width: 200px;">
+                        <option>Loading projects...</option>
+                     </select>
+                     <button id="new-project-btn" class="btn btn-sm btn-outline-light" title="Create New Project">
+                        ➕ New Project
+                     </button>
+                  </div>
+               </div>
+               <div class="col-md-3 text-end">
+                  <small class="opacity-75">Multi-Project Mode</small>
+               </div>
             </div>
          </div>
       `;
@@ -195,57 +215,54 @@ class VideoLibraryApp {
       this.updateDebugUI();
 
       try {
-         console.log('Fetching videos from API...');
-         const response = await (await fetch('/project')).json();
-         if (response.error) {
-            this.uiBuilder.error('API Error', JSON.stringify(response.error));
+         console.log('Fetching projects from API...');
+         await this.loadProjects();
+         
+         // Set up project selector event handlers
+         this.setupProjectSelector();
+         
+         // Try to load the first available project
+         if (this.projects.length > 0) {
+            await this.selectProject(this.projects[0].slug);
          } else {
-            this.project = response;
-            console.log('✅ Videos loaded successfully!', this.project);
-            console.log(this.project.dailies); // Nice table view
+            // No projects available, show empty state
+            this.showEmptyState();
+         }
 
-            //this.loadSidebar();
-
-            this.loadEditor();
-            this.loadDisplay();
-
-            // Global error handling for better debugging
-            window.addEventListener('error', event => {
-               console.error('🚨 Global Error:', {
-                  message: event.message,
-                  filename: event.filename,
-                  line: event.lineno,
-                  column: event.colno,
-                  error: event.error,
-               });
+         // Global error handling for better debugging
+         window.addEventListener('error', event => {
+            console.error('🚨 Global Error:', {
+               message: event.message,
+               filename: event.filename,
+               line: event.lineno,
+               column: event.colno,
+               error: event.error,
             });
+         });
 
-            window.addEventListener('unhandledrejection', event => {
-               console.error('🚨 Unhandled Promise Rejection:', event.reason);
-            });
+         window.addEventListener('unhandledrejection', event => {
+            console.error('🚨 Unhandled Promise Rejection:', event.reason);
+         });
 
-            // Clean up resources when page is about to be closed
-            window.addEventListener('beforeunload', () => {
-               this.cleanupVideoResources();
-            });
+         // Clean up resources when page is about to be closed
+         window.addEventListener('beforeunload', () => {
+            this.cleanupVideoResources();
+         });
 
-            // Clean up when page becomes hidden (mobile/tab switching)
-            document.addEventListener('visibilitychange', () => {
-               if (document.hidden) {
-                  const player = this.getPlayer();
-                  if (player && !player.paused) {
-                     player.pause();
-                     console.log('🔇 Paused video due to page visibility change');
-                  }
+         // Clean up when page becomes hidden (mobile/tab switching)
+         document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+               const player = this.getPlayer();
+               if (player && !player.paused) {
+                  player.pause();
+                  console.log('🔇 Paused video due to page visibility change');
                }
-            });
-
-            // Initialize connection monitoring if enabled
-            if (this.debugConfig.check_server_connections) {
-               this.fetchServerConnectionStats();
             }
+         });
 
-            // Console styling
+         // Initialize connection monitoring if enabled
+         if (this.debugConfig.check_server_connections) {
+            this.fetchServerConnectionStats();
          }
       } catch (error) {
          console.log('error:', error);
@@ -263,6 +280,293 @@ class VideoLibraryApp {
       console.log('app view created');
    }
 
+   async loadProjects() {
+      try {
+         const response = await fetch(`${this.apiBaseUrl}/projects`);
+         const data = await response.json();
+         
+         if (data.success) {
+            // Load basic project info and stats
+            this.projects = [];
+            
+            for (const project of data.projects) {
+               try {
+                  // Get project details including stats
+                  const detailResponse = await fetch(`${this.apiBaseUrl}/projects/${project.slug}`);
+                  const detailData = await detailResponse.json();
+                  
+                  if (detailData.success) {
+                     this.projects.push({
+                        ...project,
+                        stats: detailData.project.stats
+                     });
+                  } else {
+                     this.projects.push(project);
+                  }
+               } catch (err) {
+                  console.warn(`Could not load stats for ${project.slug}:`, err);
+                  this.projects.push(project);
+               }
+            }
+            
+            console.log('✅ Projects loaded:', this.projects);
+            this.updateProjectSelector();
+         } else {
+            console.error('❌ Failed to load projects:', data.error);
+            this.showError('Failed to load projects', data.error);
+         }
+      } catch (error) {
+         console.error('❌ Error loading projects:', error);
+         this.showError('Connection Error', 'Could not connect to server');
+      }
+   }
+
+   async selectProject(projectSlug) {
+      if (this.currentProjectSlug === projectSlug) {
+         console.log('Project already selected:', projectSlug);
+         return;
+      }
+
+      console.log('🎬 Selecting project:', projectSlug);
+      this.isLoading = true;
+      
+      try {
+         // Use the project endpoint that includes videos (dailies)
+         const response = await fetch(`${this.apiBaseUrl}/projects/${projectSlug}/project`);
+         const data = await response.json();
+         
+         if (response.ok && data) {
+            this.currentProject = data;
+            this.currentProjectSlug = projectSlug;
+            this.project = data; // Legacy compatibility
+            
+            console.log('✅ Project loaded:', this.currentProject);
+            console.log('📹 Videos in project:', this.currentProject.dailies?.length || 0);
+            
+            // Update UI
+            this.updateProjectDisplay();
+            this.loadEditor();
+            this.loadDisplay();
+            
+         } else {
+            console.error('❌ Failed to load project:', data?.error || 'Unknown error');
+            this.showError('Failed to load project', data?.error || 'Unknown error');
+         }
+      } catch (error) {
+         console.error('❌ Error loading project:', error);
+         this.showError('Connection Error', 'Could not load project data');
+      } finally {
+         this.isLoading = false;
+      }
+   }
+
+   updateProjectSelector() {
+      const select = document.getElementById('project-select');
+      if (!select) return;
+
+      select.innerHTML = '';
+      
+      if (this.projects.length === 0) {
+         select.innerHTML = '<option>No projects available</option>';
+         select.disabled = true;
+         return;
+      }
+
+      this.projects.forEach(project => {
+         const option = document.createElement('option');
+         option.value = project.slug;
+         option.textContent = `${project.name} (${project.stats?.videos || 0} videos)`;
+         select.appendChild(option);
+      });
+
+      select.disabled = false;
+      
+      // Select the current project if set
+      if (this.currentProjectSlug) {
+         select.value = this.currentProjectSlug;
+      }
+   }
+
+   updateProjectDisplay() {
+      // Update any project-specific UI elements here
+      const projectInfo = document.querySelector('.project-info');
+      if (projectInfo && this.currentProject) {
+         projectInfo.innerHTML = `
+            <h6>📁 ${this.currentProject.name}</h6>
+            <small class="text-muted">${this.currentProject.stats.videoCount} videos • ${this.currentProject.stats.totalSizeFormatted}</small>
+         `;
+      }
+   }
+
+   setupProjectSelector() {
+      const select = document.getElementById('project-select');
+      const newProjectBtn = document.getElementById('new-project-btn');
+
+      if (select) {
+         select.addEventListener('change', async (e) => {
+            const selectedSlug = e.target.value;
+            if (selectedSlug && selectedSlug !== this.currentProjectSlug) {
+               await this.selectProject(selectedSlug);
+            }
+         });
+      }
+
+      if (newProjectBtn) {
+         newProjectBtn.addEventListener('click', () => {
+            this.showNewProjectDialog();
+         });
+      }
+   }
+
+   showNewProjectDialog() {
+      const modal = document.createElement('div');
+      modal.className = 'modal fade';
+      modal.innerHTML = `
+         <div class="modal-dialog">
+            <div class="modal-content">
+               <div class="modal-header">
+                  <h5 class="modal-title">🎬 Create New Project</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+               </div>
+               <div class="modal-body">
+                  <form id="new-project-form">
+                     <div class="mb-3">
+                        <label for="project-name" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="project-name" placeholder="My Video Project" required>
+                        <div class="form-text">Choose a descriptive name for your project</div>
+                     </div>
+                  </form>
+               </div>
+               <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" class="btn btn-primary" id="create-project-btn">Create Project</button>
+               </div>
+            </div>
+         </div>
+      `;
+
+      document.body.appendChild(modal);
+      
+      const bsModal = new bootstrap.Modal(modal);
+      bsModal.show();
+
+      // Handle form submission
+      const createBtn = modal.querySelector('#create-project-btn');
+      const projectNameInput = modal.querySelector('#project-name');
+
+      createBtn.addEventListener('click', async () => {
+         const projectName = projectNameInput.value.trim();
+         if (!projectName) {
+            projectNameInput.classList.add('is-invalid');
+            return;
+         }
+
+         createBtn.disabled = true;
+         createBtn.innerHTML = '⏳ Creating...';
+
+         try {
+            await this.createProject(projectName);
+            bsModal.hide();
+         } catch (error) {
+            console.error('Error creating project:', error);
+            createBtn.disabled = false;
+            createBtn.innerHTML = 'Create Project';
+         }
+      });
+
+      // Auto-focus the input
+      modal.addEventListener('shown.bs.modal', () => {
+         projectNameInput.focus();
+      });
+
+      // Clean up modal when hidden
+      modal.addEventListener('hidden.bs.modal', () => {
+         document.body.removeChild(modal);
+      });
+   }
+
+   async createProject(projectName) {
+      try {
+         const response = await fetch(`${this.apiBaseUrl}/projects`, {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: projectName }),
+         });
+
+         const data = await response.json();
+
+         if (data.success) {
+            console.log('✅ Project created:', data.project);
+            
+            // Reload projects and select the new one
+            await this.loadProjects();
+            await this.selectProject(data.project.slug);
+            
+            // Show success message
+            this.showSuccess('Project Created', `"${projectName}" has been created successfully!`);
+         } else {
+            console.error('❌ Failed to create project:', data.error);
+            this.showError('Failed to create project', data.error);
+         }
+      } catch (error) {
+         console.error('❌ Error creating project:', error);
+         this.showError('Connection Error', 'Could not create project');
+      }
+   }
+
+   showEmptyState() {
+      const main = this.dom('main');
+      main.element.innerHTML = `
+         <div class="text-center py-5">
+            <div class="mb-4">
+               <div class="display-1">📁</div>
+               <h3>No Projects Available</h3>
+               <p class="text-muted">Create your first project to start organizing your videos</p>
+            </div>
+            <button class="btn btn-primary btn-lg" onclick="document.getElementById('new-project-btn').click()">
+               ➕ Create First Project
+            </button>
+         </div>
+      `;
+   }
+
+   showError(title, message) {
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-danger alert-dismissible fade show';
+      alert.innerHTML = `
+         <h4 class="alert-heading">${title}</h4>
+         <p>${message}</p>
+         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      // Insert at the top of the container
+      const container = this.uiBuilder.container;
+      container.insertBefore(alert, container.firstChild);
+   }
+
+   showSuccess(title, message) {
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-success alert-dismissible fade show';
+      alert.innerHTML = `
+         <h4 class="alert-heading">${title}</h4>
+         <p>${message}</p>
+         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      // Insert at the top of the container
+      const container = this.uiBuilder.container;
+      container.insertBefore(alert, container.firstChild);
+      
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+         if (alert.parentElement) {
+            alert.remove();
+         }
+      }, 5000);
+   }
+
    addElements({ parentId, element, childrens }, parentDom) {
       element = element || this.uiBuilder.createTag('div', null, parentId);
       parentDom = parentDom ? parentDom : document.body;
@@ -278,8 +582,9 @@ class VideoLibraryApp {
    }
 
    async loadDisplay() {
-      if (this.project.dailies.length) {
-         this.putPlayer(this.project.dailies[0]);
+      const videos = this.currentProject?.dailies || this.project?.dailies || [];
+      if (videos.length > 0) {
+         this.putPlayer(videos[0]);
       }
    }
 
@@ -288,6 +593,37 @@ class VideoLibraryApp {
       const height = this.configuration.timeline.height;
       const width = Math.round(height * ratio);
       const dom = this.dom('main');
+
+      // Clear existing content
+      dom.element.innerHTML = '';
+
+      // Get videos from current project or legacy format
+      const videos = this.currentProject?.dailies || this.project?.dailies || [];
+      
+      if (videos.length === 0) {
+         dom.element.innerHTML = `
+            <div class="text-center py-4">
+               <p class="text-muted">No videos in this project yet</p>
+               <small>Upload videos to the project's dailies folder to get started</small>
+            </div>
+         `;
+         return;
+      }
+
+      // Add project info header
+      const projectHeader = this.uiBuilder.createTag('div', '', 'project-header mb-3');
+      projectHeader.innerHTML = `
+         <div class="d-flex justify-content-between align-items-center">
+            <div class="project-info">
+               <h6>📁 ${this.currentProject?.name || 'Legacy Project'}</h6>
+               <small class="text-muted">${videos.length} videos • ${this.currentProject?.stats?.totalSizeFormatted || 'Unknown size'}</small>
+            </div>
+            <div class="timeline-controls">
+               <small class="text-muted">Click on timeline to navigate</small>
+            </div>
+         </div>
+      `;
+      dom.element.appendChild(projectHeader);
 
       // Create timeline playhead
       this.playhead = this.uiBuilder.createTag('div', '', 'timeline-playhead');
@@ -299,7 +635,7 @@ class VideoLibraryApp {
          this.handleTimelineClick(event);
       });
 
-      for (const video of this.project.dailies) {
+      for (const video of videos) {
          // Create enhanced video player UI
          console.log('Creating video player for:', video.filename);
 
@@ -320,7 +656,11 @@ class VideoLibraryApp {
          robotOverlay.append(smallRobotIcon);
 
          const imageTag = this.uiBuilder.createTag('img');
-         imageTag.src = 'work/thumbnails/' + video.filename.replace('.MP4', '.jpg');
+         // Use project-specific thumbnail path or legacy path
+         const thumbnailPath = this.currentProjectSlug 
+            ? `work/${this.currentProjectSlug}/thumbnails/${video.filename.replace('.MP4', '.jpg')}`
+            : `work/thumbnails/${video.filename.replace('.MP4', '.jpg')}`;
+         imageTag.src = thumbnailPath;
          imageTag.setAttribute(
             'style',
             `width: ${width}px; height: ${height}px; background: linear-gradient(45deg, #f0f0f0, #e0e0e0);`
@@ -411,13 +751,19 @@ class VideoLibraryApp {
       // Clean up previous video resources
       this.cleanupVideoResources();
 
-      // Set poster while loading
-      player.poster = 'work/thumbnails/' + video.filename.replace('.MP4', '.jpg');
+      // Set poster while loading - use project-specific path or legacy path
+      const thumbnailPath = this.currentProjectSlug 
+         ? `work/${this.currentProjectSlug}/thumbnails/${video.filename.replace('.MP4', '.jpg')}`
+         : `work/thumbnails/${video.filename.replace('.MP4', '.jpg')}`;
+      player.poster = thumbnailPath;
       player.style.visibility = 'hidden'; // Hide until ready
 
-      // Set new source
+      // Set new source - use project-specific path or legacy path
       const source = this.uiBuilder.createTag('source');
-      source.src = 'work/dailies/' + video.filename;
+      const videoPath = this.currentProjectSlug 
+         ? `work/${this.currentProjectSlug}/dailies/${video.filename}`
+         : `work/dailies/${video.filename}`;
+      source.src = videoPath;
       source.type = 'video/mp4';
 
       player.appendChild(source);
@@ -539,7 +885,8 @@ class VideoLibraryApp {
 
       // For now, we'll show the playhead position relative to the current video
       // In a full timeline implementation, you'd need to calculate based on all videos
-      const videoIndex = this.project.dailies.findIndex(v => v.filename === currentVideo.filename);
+      const videos = this.currentProject?.dailies || this.project?.dailies || [];
+      const videoIndex = videos.findIndex(v => v.filename === currentVideo.filename);
       const videoWidth = this.configuration.timeline.height * (1920 / 1080);
 
       // Calculate position within the current video thumbnail
@@ -556,7 +903,8 @@ class VideoLibraryApp {
 
    calculateTimelineWidth() {
       const videoWidth = this.configuration.timeline.height * (1920 / 1080);
-      return this.project.dailies.length * videoWidth;
+      const videos = this.currentProject?.dailies || this.project?.dailies || [];
+      return videos.length * videoWidth;
    }
 
    handleTimelineClick(event) {
@@ -579,13 +927,16 @@ class VideoLibraryApp {
       const videoIndex = Math.floor(relativeClickX / videoWidth);
       const positionInVideo = relativeClickX % videoWidth;
 
-      if (videoIndex >= this.project.dailies.length) return; // Clicked beyond videos
+      // Get videos from current project or legacy format
+      const videos = this.currentProject?.dailies || this.project?.dailies || [];
+      
+      if (videoIndex >= videos.length) return; // Clicked beyond videos
 
       // Calculate progress within the clicked video (0 to 1)
       const progressInVideo = positionInVideo / videoWidth;
 
       // Get the clicked video
-      const clickedVideo = this.project.dailies[videoIndex];
+      const clickedVideo = videos[videoIndex];
 
       // Show visual debug info if enabled
       if (this.debugConfig.debug_timeline_clicks) {
