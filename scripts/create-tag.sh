@@ -29,23 +29,92 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
-# Check if version is provided
-if [ $# -eq 0 ]; then
-    print_error "Version is required!"
+# Auto-version functions
+get_latest_version() {
+    local latest_tag=$(git tag -l | grep "^v[0-9]" | sort -V | tail -1)
+    if [ -z "$latest_tag" ]; then
+        echo "0.0.0"
+    else
+        echo "${latest_tag#v}" # Remove 'v' prefix
+    fi
+}
+
+increment_version() {
+    local version=$1
+    local type=$2
+    
+    IFS='.' read -r major minor patch <<< "$version"
+    
+    case $type in
+        "major")
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        "minor")
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        "patch")
+            patch=$((patch + 1))
+            ;;
+        *)
+            print_error "Invalid increment type: $type"
+            exit 1
+            ;;
+    esac
+    
+    echo "$major.$minor.$patch"
+}
+
+show_usage() {
+    echo "Usage: $0 [version|auto-increment] [message]"
     echo ""
-    echo "Usage: $0 <version> [message]"
+    echo "Auto-increment options:"
+    echo "  $0 major                          # Auto-increment major version (x.0.0)"
+    echo "  $0 minor                          # Auto-increment minor version (x.y.0)"
+    echo "  $0 patch                          # Auto-increment patch version (x.y.z)"
     echo ""
-    echo "Examples:"
+    echo "Manual version:"
     echo "  $0 1.0.0                          # Create tag v1.0.0"
     echo "  $0 1.2.3 'New feature release'    # Create tag with custom message"
     echo "  $0 2.0.0-beta.1                   # Create pre-release tag"
     echo ""
+    echo "Current latest version: $(get_latest_version)"
+    echo "Next versions would be:"
+    current=$(get_latest_version)
+    echo "  major: $(increment_version "$current" "major")"
+    echo "  minor: $(increment_version "$current" "minor")"
+    echo "  patch: $(increment_version "$current" "patch")"
+    echo ""
+}
+
+# Check arguments and determine version
+if [ $# -eq 0 ]; then
+    print_error "Version or increment type is required!"
+    echo ""
+    show_usage
     exit 1
 fi
 
-VERSION=$1
+FIRST_ARG=$1
+
+# Check if it's an auto-increment command
+if [[ "$FIRST_ARG" =~ ^(major|minor|patch)$ ]]; then
+    CURRENT_VERSION=$(get_latest_version)
+    VERSION=$(increment_version "$CURRENT_VERSION" "$FIRST_ARG")
+    MESSAGE=${2:-"Release v$VERSION ($FIRST_ARG increment from v$CURRENT_VERSION)"}
+    print_info "Auto-incrementing $FIRST_ARG version: v$CURRENT_VERSION → v$VERSION"
+elif [[ "$FIRST_ARG" == "help" ]] || [[ "$FIRST_ARG" == "--help" ]] || [[ "$FIRST_ARG" == "-h" ]]; then
+    show_usage
+    exit 0
+else
+    # Manual version specified
+    VERSION=$FIRST_ARG
+    MESSAGE=${2:-"Release v$VERSION"}
+fi
+
 TAG_NAME="v$VERSION"
-MESSAGE=${2:-"Release $TAG_NAME"}
 
 # Validate version format (basic semver check)
 if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then

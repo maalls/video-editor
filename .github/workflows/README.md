@@ -17,27 +17,41 @@ Le workflow se déclenche automatiquement quand vous poussez un tag qui suit le 
 
 ## 📋 Utilisation
 
-### Méthode recommandée : Script helper
+### Méthode recommandée : Auto-versioning
 
 ```bash
-# Créer un tag de release
-./scripts/create-tag.sh 1.2.0
+# Auto-increment patch (bug fixes): 1.0.0 → 1.0.1
+npm run release:patch
 
-# Créer un tag avec message personnalisé  
-./scripts/create-tag.sh 1.2.0 "Nouvelle fonctionnalité importante"
+# Auto-increment minor (new features): 1.0.1 → 1.1.0  
+npm run release:minor
 
-# Créer un tag de pre-release
-./scripts/create-tag.sh 2.0.0-beta.1
+# Auto-increment major (breaking changes): 1.1.0 → 2.0.0
+npm run release:major
+
+# Voir l'aide et les prochaines versions disponibles
+npm run release:help
 ```
 
-### Méthode alternative : NPM scripts
+### Méthode alternative : Script helper direct
 
 ```bash
-# Voir l'aide
-npm run release:help
+# Auto-versioning
+./scripts/create-tag.sh patch
+./scripts/create-tag.sh minor "Nouvelle fonctionnalité importante"
+./scripts/create-tag.sh major
 
-# Utiliser le script (vous devrez passer les arguments manuellement)
+# Version manuelle
+./scripts/create-tag.sh 1.2.0
+./scripts/create-tag.sh 2.0.0-beta.1 "Pre-release"
+```
+
+### Méthode manuelle : NPM scripts
+
+```bash
+# Version spécifique
 npm run release:tag -- 1.2.0
+npm run release:tag -- 1.2.0 "Message personnalisé"
 ```
 
 ### Méthode manuelle : Git
@@ -142,7 +156,7 @@ chore: auto-merge tag v1.2.0 to main
 
 ## 📝 Exemples d'utilisation
 
-### Release standard
+### Release standard avec auto-versioning
 ```bash
 # Développement sur copilot
 git checkout copilot
@@ -150,8 +164,8 @@ git add .
 git commit -m "feat: nouvelle fonctionnalité"
 git push origin copilot
 
-# Créer le tag de release
-./scripts/create-tag.sh 1.3.0 "Ajout de nouvelles fonctionnalités"
+# Auto-increment version (détecte automatiquement la prochaine version)
+npm run release:minor
 
 # Le workflow auto-merge se déclenche automatiquement
 ```
@@ -164,8 +178,19 @@ git checkout -b hotfix/critical-bug
 # ... corrections ...
 git push origin hotfix/critical-bug
 
-# Tag de patch
-./scripts/create-tag.sh 1.2.1 "Correction critique"
+# Auto-increment patch pour correction de bug
+npm run release:patch
+```
+
+### Breaking change
+```bash
+# Développement avec changements incompatibles
+git add .
+git commit -m "feat!: nouvelle API incompatible"
+git push origin copilot
+
+# Auto-increment major version
+npm run release:major
 ```
 
 Ce workflow simplifie considérablement le processus de release et garantit une intégration fluide vers la branche principale ! 🚀
