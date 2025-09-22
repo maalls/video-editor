@@ -4,6 +4,8 @@ import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import Database from './../Database/Database.js';
+import { Compressor } from '../Compressor/Compressor.js';
+import { Monitoring } from '../Monitoring/Monitoring.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +19,10 @@ export default class Server {
       this.videoPath = videoPath;
       this.workdir = workdir;
       this.videoDatabase = new Database(videoPath, workdir);
+      
+      // Initialize specialized service classes
+      this.compressor = new Compressor(this.videoDatabase, workdir);
+      this.monitoring = new Monitoring(workdir);
    }
 
    async start() {
@@ -171,10 +177,10 @@ export default class Server {
        */
       app.get('/compression/profiles', (req, res) => {
          try {
-            const profiles = this.videoDatabase.getCompressionProfiles();
+            const profiles = this.compressor.getProfiles();
             res.json({
                profiles,
-               default: this.videoDatabase.compressionConfig?.compression?.defaultProfile || 'web'
+               default: 'web'
             });
          } catch (err) {
             res.status(500).json({
@@ -199,7 +205,7 @@ export default class Server {
          }
 
          try {
-            const result = await this.videoDatabase.compressVideo(videoId, profile, (progress) => {
+            const result = await this.compressor.compressVideo(videoId, profile, (progress) => {
                // Could implement WebSocket for real-time progress updates
                console.log(`Compression progress: ${progress.filename} - ${progress.progress}%`);
             });
@@ -225,7 +231,7 @@ export default class Server {
          const { profile } = req.body;
 
          try {
-            const result = await this.videoDatabase.compressAllVideos(profile, (progress) => {
+            const result = await this.compressor.compressAllVideos(profile, (progress) => {
                console.log(`Batch compression: [${progress.batchProgress.current}/${progress.batchProgress.total}] ${progress.filename} - ${progress.progress}%`);
             });
 
@@ -246,31 +252,10 @@ export default class Server {
        */
       app.get('/compressed', (req, res) => {
          try {
-            const compressedDir = this.videoDatabase.compressionConfig?.compression?.outputDirectory;
-            if (!compressedDir || !fs.existsSync(compressedDir)) {
-               return res.json({ files: [] });
-            }
-
-            const files = fs.readdirSync(compressedDir)
-               .filter(file => file.endsWith('.mp4'))
-               .map(file => {
-                  const filePath = path.join(compressedDir, file);
-                  const stats = fs.statSync(filePath);
-                  return {
-                     filename: file,
-                     size: stats.size,
-                     sizeFormatted: this.videoDatabase.formatFileSize(stats.size),
-                     created: stats.ctime,
-                     modified: stats.mtime
-                  };
-               });
-
+            const files = this.compressor.getCompressedVideos();
             res.json({ files });
-         } catch (err) {
-            res.status(500).json({
-               error: 'Failed to list compressed videos',
-               message: err.message,
-            });
+         } catch (error) {
+            res.status(500).json({ error: 'Failed to list compressed files', message: error.message });
          }
       });
 
@@ -279,7 +264,7 @@ export default class Server {
        */
       app.get('/compression/workspace', (req, res) => {
          try {
-            const workspaceProfiles = this.videoDatabase.getWorkspaceProfiles();
+            const workspaceProfiles = this.compressor.getWorkspaceProfiles();
             const defaultProfile = this.videoDatabase.getDefaultWorkspaceProfile();
             
             res.json({
@@ -310,7 +295,7 @@ export default class Server {
          }
 
          // Validate it's a workspace profile
-         const workspaceProfiles = this.videoDatabase.getWorkspaceProfiles();
+         const workspaceProfiles = this.compressor.getWorkspaceProfiles();
          if (!workspaceProfiles[profile]) {
             return res.status(400).json({
                error: 'Invalid workspace profile',
@@ -320,7 +305,7 @@ export default class Server {
          }
 
          try {
-            const result = await this.videoDatabase.compressVideo(videoId, profile, (progress) => {
+            const result = await this.compressor.compressVideo(videoId, profile, (progress) => {
                console.log(`Workspace compression: ${progress.filename} - ${progress.progress}%`);
             });
 
@@ -336,6 +321,50 @@ export default class Server {
                error: 'Workspace video compression failed',
                message: err.message,
                videoId
+            });
+         }
+      });
+
+      // File monitoring endpoints
+      app.get('/monitoring/files', async (req, res) => {
+         try {
+            console.log('📊 Generating file monitoring report...');
+            
+            const report = await this.monitoring.generateFileReport();
+            res.json({ 
+               success: true, 
+               message: 'File monitoring report generated successfully',
+               data: report
+            });
+         } catch (error) {
+            console.error('File monitoring error:', error);
+            res.status(500).json({ 
+               success: false, 
+               error: error.message 
+            });
+         }
+      });
+
+      app.get('/monitoring/files/json', (req, res) => {
+         try {
+            const data = this.monitoring.getLatestData();
+            
+            if (!data) {
+               return res.status(404).json({
+                  success: false,
+                  error: 'No monitoring data found. Generate a report first.'
+               });
+            }
+
+            res.json({
+               success: true,
+               data: data
+            });
+         } catch (error) {
+            console.error('Error reading monitoring data:', error);
+            res.status(500).json({ 
+               success: false, 
+               error: error.message 
             });
          }
       });
@@ -392,6 +421,8 @@ export default class Server {
             console.log('  POST /compress/workspace/:id - Compress with workspace profile');
             console.log('  POST /compress/batch   - Compress all videos');
             console.log('  GET  /compressed       - List compressed videos');
+            console.log('  GET  /monitoring/files - Generate file monitoring report');
+            console.log('  GET  /monitoring/files/json - Get latest monitoring data');
          });
       } catch (err) {
          console.error('Failed to start server:', err);
