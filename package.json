@@ -20,7 +20,11 @@
       "format:check": "prettier --check .",
       "bootstrap:update": "cp node_modules/bootstrap/dist/css/bootstrap.min.css* src/frontend/static/vendor/bootstrap/ && cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* src/frontend/static/vendor/bootstrap/",
       "assets:update": "cp -r assets/robot_icon_pack/* src/frontend/static/assets/icons/",
-      "assets:optimize": "echo 'Assets copied successfully! 🤖 VIAI icons are ready to use.'"
+      "assets:optimize": "echo 'Assets copied successfully! 🤖 VIAI icons are ready to use.'",
+      "deps:diff": "node tools/package-diff/bin/package-diff.js",
+      "deps:since": "node tools/package-diff/bin/package-diff.js --since",
+      "deps:list": "node tools/package-diff/bin/package-diff.js --list",
+      "deps:help": "node tools/package-diff/bin/package-diff.js --help"
    },
    "jest": {
       "testEnvironment": "node",
