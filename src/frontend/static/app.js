@@ -226,31 +226,60 @@ class VideoLibraryApp {
       const ratio = 1920 / 1080;
       const height = 300;
       const width = height * ratio;
-
       const display = this.app.childrens.top.childrens.display.element;
-      const videoTag = this.uiBuilder.createTag('video', '', 'video');
-      videoTag.setAttribute('id', `video-player-${video.filename}`);
-      videoTag.setAttribute('class', 'video');
-      videoTag.setAttribute('controls', '');
-      videoTag.setAttribute('preload', 'meta');
-      videoTag.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
+
+      // Create video element only once
+      if (!this.videoElement) {
+         this.videoElement = this.uiBuilder.createTag('video', '', 'video main-video-player');
+         this.videoElement.setAttribute('id', 'main-video-player');
+         this.videoElement.setAttribute('class', 'video');
+         this.videoElement.setAttribute('controls', '');
+         this.videoElement.setAttribute('preload', 'meta');
+         this.videoElement.setAttribute('style', `width: ${width}px; height: ${height}px; background: #000;`);
+         
+         // Add event listeners only once
+         this.videoElement.addEventListener('timeupdate', () => {
+            // Only update playhead if we're not in the middle of a seek operation
+            if (!this.isSeeking && this.currentVideo) {
+               this.updatePlayheadPosition(this.videoElement.currentTime, this.currentVideo);
+            }
+         });
+         
+         this.videoElement.addEventListener('loadedmetadata', () => {
+            this.videoDuration = this.videoElement.duration;
+            console.log('Video duration loaded:', this.videoDuration, 'for', this.currentVideo?.filename);
+         });
+
+         // Ensure display container exists and append video element
+         if (display.innerHTML === '') {
+            display.append(this.videoElement);
+         }
+      }
+
+      // Update the video source
+      this.loadVideoSource(video);
+      
+      // Store reference to current video for playhead sync
+      this.currentVideo = video;
+      this.currentVideoElement = this.videoElement;
+   }
+
+   loadVideoSource(video) {
+      // Clear existing sources
+      const existingSources = this.videoElement.querySelectorAll('source');
+      existingSources.forEach(source => source.remove());
+      
+      // Create new source
       const source = this.uiBuilder.createTag('source', '', 'video-source');
       source.setAttribute('src', `/video/${video.filename}/stream`);
       source.setAttribute('type', 'video/mp4');
-      videoTag.append(source);
-
-      display.innerHTML = null;
-      display.append(videoTag);
       
-      // Add event listeners for playhead synchronization
-      videoTag.addEventListener('timeupdate', () => {
-         this.updatePlayheadPosition(videoTag.currentTime, video);
-      });
+      this.videoElement.append(source);
       
-      videoTag.addEventListener('loadedmetadata', () => {
-         this.videoDuration = videoTag.duration;
-         console.log('Video duration loaded:', this.videoDuration);
-      });
+      // Load the new video
+      this.videoElement.load();
+      
+      console.log(`📼 Loaded video source: ${video.filename}`);
    }
 
    updatePlayheadPosition(currentTime, currentVideo) {
@@ -311,81 +340,188 @@ class VideoLibraryApp {
       // Get the clicked video
       const clickedVideo = this.project.dailies[videoIndex];
       
+      // Show visual debug info
+      this.showDebugInfo(`🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px`);
+      
       // Load and seek to the clicked video position
       this.seekToVideoPosition(clickedVideo, progressInVideo, videoIndex);
       
       console.log(`Timeline clicked: Video ${videoIndex} (${clickedVideo.filename}) at ${(progressInVideo * 100).toFixed(1)}%`);
    }
+   
+   showDebugInfo(message, duration = 3000) {
+      // Remove existing debug info
+      const existingDebug = document.querySelector('.debug-info');
+      if (existingDebug) existingDebug.remove();
+      
+      // Create debug info display
+      const debugDiv = document.createElement('div');
+      debugDiv.className = 'debug-info';
+      debugDiv.style.cssText = `
+         position: fixed;
+         top: 10px;
+         right: 10px;
+         background: rgba(0, 0, 0, 0.8);
+         color: white;
+         padding: 10px;
+         border-radius: 5px;
+         font-family: monospace;
+         font-size: 12px;
+         z-index: 10000;
+         max-width: 300px;
+      `;
+      debugDiv.textContent = message;
+      
+      document.body.appendChild(debugDiv);
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => {
+         if (debugDiv.parentElement) {
+            debugDiv.remove();
+         }
+      }, duration);
+   }
 
    seekToVideoPosition(video, progress, videoIndex) {
-      // First, display the clicked video
+      // First, display the clicked video (loads new source)
       this.displayClip(video, false);
       
-      // Wait a bit for the video to load, then seek to the position and play
-      setTimeout(() => {
-         const videoElement = document.querySelector(`#video-player-${video.filename}`);
-         if (videoElement) {
-            const seekAndPlay = async () => {
-               const targetTime = progress * videoElement.duration;
-               console.log(`Seeking to ${targetTime.toFixed(2)}s in ${video.filename}`);
-               
-               videoElement.currentTime = targetTime;
-               
-               // Force play immediately after seek - the click should allow this
-               setTimeout(async () => {
-                  try {
-                     console.log(`🎬 Attempting to play ${video.filename}...`);
-                     const playPromise = videoElement.play();
-                     
-                     if (playPromise !== undefined) {
-                        await playPromise;
-                        console.log(`✅ Successfully playing ${video.filename} from ${targetTime.toFixed(2)}s`);
-                     }
-                  } catch (error) {
-                     console.log('❌ Auto-play blocked by browser policy:', error.message);
-                     console.log('💡 Try clicking directly on the video to start playback');
-                     
-                     // Add a play button overlay if auto-play fails
-                     const playButton = document.createElement('div');
-                     playButton.innerHTML = '▶️ Click to Play';
-                     playButton.style.cssText = `
-                        position: absolute; 
-                        top: 50%; 
-                        left: 50%; 
-                        transform: translate(-50%, -50%);
-                        background: rgba(0,0,0,0.8); 
-                        color: white; 
-                        padding: 10px; 
-                        border-radius: 5px;
-                        cursor: pointer;
-                        z-index: 1000;
-                     `;
-                     
-                     playButton.onclick = () => {
-                        videoElement.play();
-                        playButton.remove();
-                     };
-                     
-                     videoElement.parentElement.style.position = 'relative';
-                     videoElement.parentElement.appendChild(playButton);
-                     
-                     setTimeout(() => playButton.remove(), 5000);
-                  }
-               }, 50);
-            };
+      // Use the single reusable video element
+      const videoElement = this.videoElement;
+      if (!videoElement) {
+         console.error('Video element not found');
+         return;
+      }
+      
+      // Store the target progress for when the video is ready
+      const targetProgress = progress;
+      
+      const performSeekAndPlay = async () => {
+         try {
+            // Set seeking flag to prevent playhead updates during seek
+            this.isSeeking = true;
             
-            if (videoElement.readyState >= 1) {
-               // Metadata already loaded
-               seekAndPlay();
-            } else {
-               // Wait for metadata to load
-               videoElement.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+            const targetTime = targetProgress * videoElement.duration;
+            console.log(`Seeking to ${targetTime.toFixed(2)}s in ${video.filename} (duration: ${videoElement.duration.toFixed(2)}s)`);
+            
+            // Update debug info with seek details
+            this.showDebugInfo(`🎬 Video: ${video.filename}\n⏱️ Seeking to: ${targetTime.toFixed(2)}s\n📺 Duration: ${videoElement.duration.toFixed(2)}s`);
+            
+            // Set up a promise to wait for the seek to complete
+            const waitForSeek = new Promise((resolve) => {
+               const onSeeked = () => {
+                  videoElement.removeEventListener('seeked', onSeeked);
+                  console.log(`✅ Seek completed to ${videoElement.currentTime.toFixed(2)}s`);
+                  this.showDebugInfo(`✅ Seeked to: ${videoElement.currentTime.toFixed(2)}s\n🎬 Ready to play from this position`);
+                  
+                  // Clear seeking flag after a short delay to allow the video to stabilize
+                  setTimeout(() => {
+                     this.isSeeking = false;
+                  }, 100);
+                  
+                  resolve();
+               };
+               videoElement.addEventListener('seeked', onSeeked);
                
-               // Also try when it's ready to play
-               videoElement.addEventListener('canplay', seekAndPlay, { once: true });
+               // Pause the video first to ensure clean seeking
+               videoElement.pause();
+               videoElement.currentTime = targetTime;
+            });
+            
+            // Wait for seek to complete, then try to play
+            await waitForSeek;
+            
+            try {
+               console.log(`🎬 Attempting to play ${video.filename}...`);
+               await videoElement.play();
+               console.log(`✅ Successfully playing ${video.filename} from ${targetTime.toFixed(2)}s`);
+            } catch (playError) {
+               console.log('❌ Auto-play blocked by browser policy:', playError.message);
+               this.showPlayButton(videoElement, video.filename);
             }
+            
+         } catch (error) {
+            console.error('Error in seekToVideoPosition:', error);
+            this.isSeeking = false; // Make sure to clear the flag on error
          }
-      }, 150);
+      };
+      
+      // Check if video metadata is already loaded
+      if (videoElement.readyState >= HTMLMediaElement.HAVE_METADATA) {
+         performSeekAndPlay();
+      } else {
+         // Wait for metadata to load using proper event listeners
+         const onLoadedMetadata = () => {
+            videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
+            performSeekAndPlay();
+         };
+         videoElement.addEventListener('loadedmetadata', onLoadedMetadata);
+      }
+   }
+   
+   showPlayButton(videoElement, filename) {
+      // Add a play button overlay if auto-play fails
+      const playButton = document.createElement('div');
+      playButton.innerHTML = '▶️ Click to Play';
+      playButton.className = 'video-play-overlay';
+      playButton.style.cssText = `
+         position: absolute; 
+         top: 50%; 
+         left: 50%; 
+         transform: translate(-50%, -50%);
+         background: rgba(0,0,0,0.8); 
+         color: white; 
+         padding: 12px 20px; 
+         border-radius: 8px;
+         cursor: pointer;
+         z-index: 1000;
+         font-size: 16px;
+         font-weight: bold;
+         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+         transition: background-color 0.2s ease;
+      `;
+      
+      playButton.onmouseenter = () => {
+         playButton.style.backgroundColor = 'rgba(0,0,0,0.9)';
+      };
+      
+      playButton.onmouseleave = () => {
+         playButton.style.backgroundColor = 'rgba(0,0,0,0.8)';
+      };
+      
+      playButton.onclick = async () => {
+         try {
+            // Store current time before play to ensure it doesn't reset
+            const currentTime = videoElement.currentTime;
+            console.log(`🎬 Manual play from ${currentTime.toFixed(2)}s`);
+            
+            await videoElement.play();
+            
+            // Ensure the video is still at the correct time after play starts
+            if (Math.abs(videoElement.currentTime - currentTime) > 0.5) {
+               console.log(`⚠️ Time jumped during play, correcting from ${videoElement.currentTime.toFixed(2)}s to ${currentTime.toFixed(2)}s`);
+               videoElement.currentTime = currentTime;
+            }
+            
+            playButton.remove();
+            console.log(`✅ Manual play successful for ${filename} from ${currentTime.toFixed(2)}s`);
+         } catch (error) {
+            console.error('Manual play failed:', error);
+         }
+      };
+      
+      // Ensure parent has relative positioning
+      if (videoElement.parentElement) {
+         videoElement.parentElement.style.position = 'relative';
+         videoElement.parentElement.appendChild(playButton);
+         
+         // Auto-remove after 10 seconds
+         setTimeout(() => {
+            if (playButton.parentElement) {
+               playButton.remove();
+            }
+         }, 10000);
+      }
    }
 
    showVideoError(dom, title, message) {

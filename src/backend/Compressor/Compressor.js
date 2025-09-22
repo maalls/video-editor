@@ -21,8 +21,9 @@ export class Compressor {
       try {
          const configPath = path.join(process.cwd(), 'compression-config.json');
          const configData = fs.readFileSync(configPath, 'utf8');
-         this.compressionProfiles = JSON.parse(configData);
-         console.log('📋 Loaded compression profiles:', Object.keys(this.compressionProfiles.profiles).join(', '));
+         const configObject = JSON.parse(configData);
+         this.compressionProfiles = configObject.compression || configObject;
+         console.log('📋 Loaded compression profiles:', Object.keys(this.compressionProfiles.profiles || {}).join(', '));
       } catch (error) {
          console.error('Error loading compression profiles:', error.message);
          this.compressionProfiles = { profiles: {} };
