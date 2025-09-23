@@ -34,8 +34,8 @@ body {
    flex-direction: column;
    background-color: green;
    padding: 0px;
-   width: 300px;
    height: 100%;
+   /* Width is set dynamically via JavaScript based on aspect ratio */
 }
 .video-container:hover {
    background-color: darkgreen;

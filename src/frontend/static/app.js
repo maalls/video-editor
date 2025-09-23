@@ -1047,6 +1047,11 @@ class VideoLibraryApp {
 
       this.playhead.style.left = `${absolutePosition}px`;
 
+      if (this.debugConfig.log_video_events && Math.floor(currentTime) % 5 === 0) {
+         console.log(`📍 Playhead: Video ${videoIndex}, time ${currentTime.toFixed(1)}s/${this.videoDuration.toFixed(1)}s, position ${absolutePosition}px`);
+         console.log(`📐 Calculation: ${paddingLeft} + ${videoIndex} * ${videoWidth} + ${positionWithinVideo} = ${absolutePosition}`);
+      }
+
       //console.log(`Playhead: ${currentTime.toFixed(2)}s / ${this.videoDuration.toFixed(2)}s at position ${absolutePosition}px`);
    }
 
@@ -1064,22 +1069,49 @@ class VideoLibraryApp {
 
       const timeline = event.currentTarget;
       const rect = timeline.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
+      
+      // Find the scrollable parent container (.main)
+      const scrollContainer = timeline.closest('.main') || timeline.parentElement;
+      const scrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
+      
+      const clickX = event.clientX - rect.left + scrollLeft;
       const paddingLeft = 20; // Timeline padding
 
       // Calculate which video and position within that video
       const videoWidth = this.configuration.timeline.height * (1920 / 1080);
       const relativeClickX = clickX - paddingLeft;
 
-      if (relativeClickX < 0) return; // Clicked in padding area
+      console.log(`Timeline dimensions: width=${rect.width}, height=${rect.height}`);
+      console.log(`Scroll container: ${scrollContainer?.className}, scrollLeft=${scrollLeft}`);
+      console.log(`Click: clientX=${event.clientX}, rectLeft=${rect.left}, scrollLeft=${scrollLeft}, clickX=${clickX}, relativeClickX=${relativeClickX}`);
+      console.log(`Video width: ${videoWidth}, padding: ${paddingLeft}`);
+
+      if (relativeClickX < 0) {
+         console.log('Clicked in padding area');
+         return; // Clicked in padding area
+      }
 
       const videoIndex = Math.floor(relativeClickX / videoWidth);
       const positionInVideo = relativeClickX % videoWidth;
 
       // Get videos from current project or legacy format
       const videos = this.currentProject?.dailies || this.project?.dailies || [];
+      
+      if (videos.length === 0) {
+         console.log('No videos available for timeline interaction');
+         return;
+      }
 
-      if (videoIndex >= videos.length) return; // Clicked beyond videos
+      if (videoIndex >= videos.length) {
+         console.log(`Click beyond available videos: index ${videoIndex}, available ${videos.length}`);
+         return; // Clicked beyond videos
+      }
+
+      // Ensure we don't have negative video index
+      if (videoIndex < 0) {
+         console.log('Click before first video');
+         return;
+      }
 
       // Calculate progress within the clicked video (0 to 1)
       const progressInVideo = positionInVideo / videoWidth;
@@ -1090,12 +1122,14 @@ class VideoLibraryApp {
       // Show visual debug info if enabled
       if (this.debugConfig.debug_timeline_clicks) {
          this.showDebugInfo(
-            `🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px`
+            `🎬 Video ${videoIndex}: ${clickedVideo.filename}\n⏱️ Progress: ${(progressInVideo * 100).toFixed(1)}%\n📍 Click: ${clickX}px\n📐 Video Width: ${videoWidth}px\n📍 Position in Video: ${positionInVideo}px`
          );
       }
 
-      // Store the target playhead position for later
-      this.targetPlayheadPosition = clickX;
+      // Calculate the correct target playhead position
+      // This should match the calculation in updatePlayheadPosition()
+      const targetPosition = paddingLeft + videoIndex * videoWidth + positionInVideo;
+      this.targetPlayheadPosition = targetPosition;
 
       // Load and seek to the clicked video position
       this.seekToVideoPosition(clickedVideo, progressInVideo, videoIndex);
@@ -1209,7 +1243,11 @@ class VideoLibraryApp {
       // Store the target progress for when the video is ready
       const targetProgress = progress;
 
-      this.playhead.style.left = `${this.targetPlayheadPosition}px`;
+      // Don't set playhead position immediately - let it be handled by the seek completion
+      // this.playhead.style.left = `${this.targetPlayheadPosition}px`;
+
+      console.log(`🎯 Target: Video ${videoIndex} (${video.filename}) at ${(targetProgress * 100).toFixed(1)}%`);
+      console.log(`📐 Expected playhead position: ${this.targetPlayheadPosition}px`);
 
       const targetTime = targetProgress * video.info.ffprob.video.duration;
       console.log('duration', video.info.ffprob.video.duration);
