@@ -60,6 +60,28 @@ class VideoLibraryApp {
       this.start();
    }
 
+   /**
+    * Parse URL parameters for project ID
+    */
+   getUrlProjectId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const projectId = urlParams.get('project') || urlParams.get('projectId') || urlParams.get('id');
+      console.log('🔗 URL project parameter:', projectId);
+      return projectId;
+   }
+
+   /**
+    * Update URL with current project ID without page reload
+    */
+   updateUrlProjectId(projectSlug) {
+      if (!projectSlug) return;
+      
+      const url = new URL(window.location);
+      url.searchParams.set('project', projectSlug);
+      window.history.replaceState({}, '', url);
+      console.log('🔗 Updated URL with project:', projectSlug);
+   }
+
    async loadDebugConfig() {
       try {
          const response = await fetch('/debug.json');
@@ -142,7 +164,12 @@ class VideoLibraryApp {
                   </div>
                </div>
                <div class="col-md-3 text-end">
-                  <small class="opacity-75">Multi-Project Mode</small>
+                  <div class="d-flex align-items-center justify-content-end gap-2">
+                     <button id="share-project-btn" class="btn btn-sm btn-outline-light" title="Share project URL" style="display: none;">
+                        🔗 Share
+                     </button>
+                     <small class="opacity-75">Multi-Project Mode</small>
+                  </div>
                </div>
             </div>
          </div>
@@ -217,12 +244,30 @@ class VideoLibraryApp {
       try {
          console.log('Fetching projects from API...');
          await this.loadProjects();
-         
+
          // Set up project selector event handlers
          this.setupProjectSelector();
-         
-         // Try to load the first available project
-         if (this.projects.length > 0) {
+
+         // Check for project ID in URL parameters first
+         const urlProjectId = this.getUrlProjectId();
+         let targetProject = null;
+
+         if (urlProjectId) {
+            // Try to find project by slug
+            targetProject = this.projects.find(p => p.slug === urlProjectId);
+            
+            if (targetProject) {
+               console.log('✅ Found project from URL:', targetProject.name);
+            } else {
+               console.warn('⚠️ Project not found in URL:', urlProjectId);
+               this.showError('Project Not Found', `Project "${urlProjectId}" was not found. Loading first available project instead.`);
+            }
+         }
+
+         // Load target project or fallback to first available project
+         if (targetProject) {
+            await this.selectProject(targetProject.slug);
+         } else if (this.projects.length > 0) {
             await this.selectProject(this.projects[0].slug);
          } else {
             // No projects available, show empty state
@@ -284,21 +329,21 @@ class VideoLibraryApp {
       try {
          const response = await fetch(`${this.apiBaseUrl}/projects`);
          const data = await response.json();
-         
+
          if (data.success) {
             // Load basic project info and stats
             this.projects = [];
-            
+
             for (const project of data.projects) {
                try {
                   // Get project details including stats
                   const detailResponse = await fetch(`${this.apiBaseUrl}/projects/${project.slug}`);
                   const detailData = await detailResponse.json();
-                  
+
                   if (detailData.success) {
                      this.projects.push({
                         ...project,
-                        stats: detailData.project.stats
+                        stats: detailData.project.stats,
                      });
                   } else {
                      this.projects.push(project);
@@ -308,7 +353,7 @@ class VideoLibraryApp {
                   this.projects.push(project);
                }
             }
-            
+
             console.log('✅ Projects loaded:', this.projects);
             this.updateProjectSelector();
          } else {
@@ -329,32 +374,39 @@ class VideoLibraryApp {
 
       console.log('🎬 Selecting project:', projectSlug);
       this.isLoading = true;
-      
+
+      // Clear any currently playing video before switching projects
+      this.clearCurrentVideo();
+
       try {
          // Use the project endpoint that includes videos (dailies)
          const response = await fetch(`${this.apiBaseUrl}/projects/${projectSlug}/project`);
          const data = await response.json();
-         
+
          if (response.ok && data) {
             this.currentProject = data;
             this.currentProjectSlug = projectSlug;
             this.project = data; // Legacy compatibility
-            
+
             console.log('✅ Project loaded:', this.currentProject);
             console.log('📹 Videos in project:', this.currentProject.dailies?.length || 0);
-            
+
             // Update UI
             this.updateProjectDisplay();
             this.loadEditor();
             this.loadDisplay();
-            
+
+            // Update URL to reflect current project
+            this.updateUrlProjectId(projectSlug);
          } else {
             console.error('❌ Failed to load project:', data?.error || 'Unknown error');
             this.showError('Failed to load project', data?.error || 'Unknown error');
+            // Keep video cleared since project failed to load
          }
       } catch (error) {
          console.error('❌ Error loading project:', error);
          this.showError('Connection Error', 'Could not load project data');
+         // Keep video cleared since project failed to load
       } finally {
          this.isLoading = false;
       }
@@ -365,7 +417,7 @@ class VideoLibraryApp {
       if (!select) return;
 
       select.innerHTML = '';
-      
+
       if (this.projects.length === 0) {
          select.innerHTML = '<option>No projects available</option>';
          select.disabled = true;
@@ -380,7 +432,7 @@ class VideoLibraryApp {
       });
 
       select.disabled = false;
-      
+
       // Select the current project if set
       if (this.currentProjectSlug) {
          select.value = this.currentProjectSlug;
@@ -393,8 +445,19 @@ class VideoLibraryApp {
       if (projectInfo && this.currentProject) {
          projectInfo.innerHTML = `
             <h6>📁 ${this.currentProject.name}</h6>
-            <small class="text-muted">${this.currentProject.stats.videoCount} videos • ${this.currentProject.stats.totalSizeFormatted}</small>
+            <small class="text-muted">${this.currentProject.stats?.videos || 0} videos • ${this.currentProject.stats?.totalSizeFormatted || 'Unknown size'}</small>
          `;
+      }
+
+      // Update browser title to include project name
+      if (this.currentProject) {
+         document.title = `VIAI - ${this.currentProject.name}`;
+      }
+
+      // Show/hide share button based on whether a project is selected
+      const shareBtn = document.getElementById('share-project-btn');
+      if (shareBtn) {
+         shareBtn.style.display = this.currentProjectSlug ? 'inline-block' : 'none';
       }
    }
 
@@ -403,7 +466,7 @@ class VideoLibraryApp {
       const newProjectBtn = document.getElementById('new-project-btn');
 
       if (select) {
-         select.addEventListener('change', async (e) => {
+         select.addEventListener('change', async e => {
             const selectedSlug = e.target.value;
             if (selectedSlug && selectedSlug !== this.currentProjectSlug) {
                await this.selectProject(selectedSlug);
@@ -416,6 +479,51 @@ class VideoLibraryApp {
             this.showNewProjectDialog();
          });
       }
+
+      // Set up share project button
+      const shareBtn = document.getElementById('share-project-btn');
+      if (shareBtn) {
+         shareBtn.addEventListener('click', () => {
+            this.shareCurrentProject();
+         });
+      }
+   }
+
+   shareCurrentProject() {
+      if (!this.currentProjectSlug) {
+         this.showError('No Project Selected', 'Please select a project first to share its URL.');
+         return;
+      }
+
+      const projectUrl = `${window.location.origin}${window.location.pathname}?project=${this.currentProjectSlug}`;
+      
+      // Try to use the Web Share API if available
+      if (navigator.share) {
+         navigator.share({
+            title: `VIAI - ${this.currentProject?.name || this.currentProjectSlug}`,
+            text: `Check out this video project: ${this.currentProject?.name || this.currentProjectSlug}`,
+            url: projectUrl
+         }).then(() => {
+            console.log('✅ Project shared successfully');
+         }).catch((error) => {
+            console.log('❌ Error sharing:', error);
+            this.fallbackShare(projectUrl);
+         });
+      } else {
+         this.fallbackShare(projectUrl);
+      }
+   }
+
+   fallbackShare(projectUrl) {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(projectUrl).then(() => {
+         this.showSuccess('URL Copied', `Project URL copied to clipboard!\n${projectUrl}`);
+         console.log('✅ Project URL copied to clipboard:', projectUrl);
+      }).catch((error) => {
+         console.error('❌ Failed to copy URL:', error);
+         // Final fallback: show URL in a prompt
+         prompt('Copy this project URL:', projectUrl);
+      });
    }
 
    showNewProjectDialog() {
@@ -446,7 +554,7 @@ class VideoLibraryApp {
       `;
 
       document.body.appendChild(modal);
-      
+
       const bsModal = new bootstrap.Modal(modal);
       bsModal.show();
 
@@ -499,11 +607,11 @@ class VideoLibraryApp {
 
          if (data.success) {
             console.log('✅ Project created:', data.project);
-            
+
             // Reload projects and select the new one
             await this.loadProjects();
             await this.selectProject(data.project.slug);
-            
+
             // Show success message
             this.showSuccess('Project Created', `"${projectName}" has been created successfully!`);
          } else {
@@ -517,6 +625,9 @@ class VideoLibraryApp {
    }
 
    showEmptyState() {
+      // Clear any video that might be playing
+      this.clearCurrentVideo();
+      
       const main = this.dom('main');
       main.element.innerHTML = `
          <div class="text-center py-5">
@@ -540,7 +651,7 @@ class VideoLibraryApp {
          <p>${message}</p>
          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       `;
-      
+
       // Insert at the top of the container
       const container = this.uiBuilder.container;
       container.insertBefore(alert, container.firstChild);
@@ -554,11 +665,11 @@ class VideoLibraryApp {
          <p>${message}</p>
          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       `;
-      
+
       // Insert at the top of the container
       const container = this.uiBuilder.container;
       container.insertBefore(alert, container.firstChild);
-      
+
       // Auto-dismiss after 5 seconds
       setTimeout(() => {
          if (alert.parentElement) {
@@ -599,7 +710,7 @@ class VideoLibraryApp {
 
       // Get videos from current project or legacy format
       const videos = this.currentProject?.dailies || this.project?.dailies || [];
-      
+
       if (videos.length === 0) {
          dom.element.innerHTML = `
             <div class="text-center py-4">
@@ -611,7 +722,7 @@ class VideoLibraryApp {
       }
 
       // Add project info header
-      const projectHeader = this.uiBuilder.createTag('div', '', 'project-header mb-3');
+      /*const projectHeader = this.uiBuilder.createTag('div', '', 'project-header mb-3');
       projectHeader.innerHTML = `
          <div class="d-flex justify-content-between align-items-center">
             <div class="project-info">
@@ -624,7 +735,7 @@ class VideoLibraryApp {
          </div>
       `;
       dom.element.appendChild(projectHeader);
-
+      */
       // Create timeline playhead
       this.playhead = this.uiBuilder.createTag('div', '', 'timeline-playhead');
       this.playhead.style.left = '20px'; // Initial position (accounting for padding)
@@ -657,7 +768,7 @@ class VideoLibraryApp {
 
          const imageTag = this.uiBuilder.createTag('img');
          // Use project-specific thumbnail path or legacy path
-         const thumbnailPath = this.currentProjectSlug 
+         const thumbnailPath = this.currentProjectSlug
             ? `work/${this.currentProjectSlug}/thumbnails/${video.filename.replace('.MP4', '.jpg')}`
             : `work/thumbnails/${video.filename.replace('.MP4', '.jpg')}`;
          imageTag.src = thumbnailPath;
@@ -752,7 +863,7 @@ class VideoLibraryApp {
       this.cleanupVideoResources();
 
       // Set poster while loading - use project-specific path or legacy path
-      const thumbnailPath = this.currentProjectSlug 
+      const thumbnailPath = this.currentProjectSlug
          ? `work/${this.currentProjectSlug}/thumbnails/${video.filename.replace('.MP4', '.jpg')}`
          : `work/thumbnails/${video.filename.replace('.MP4', '.jpg')}`;
       player.poster = thumbnailPath;
@@ -760,7 +871,7 @@ class VideoLibraryApp {
 
       // Set new source - use project-specific path or legacy path
       const source = this.uiBuilder.createTag('source');
-      const videoPath = this.currentProjectSlug 
+      const videoPath = this.currentProjectSlug
          ? `work/${this.currentProjectSlug}/dailies/${video.filename}`
          : `work/dailies/${video.filename}`;
       source.src = videoPath;
@@ -843,6 +954,44 @@ class VideoLibraryApp {
          console.error('Failed to fetch server connection stats:', error);
       }
       return null;
+   }
+
+   clearCurrentVideo() {
+      // Clear the currently playing video when switching projects
+      console.log('🧹 Clearing current video before project switch...');
+      
+      const player = this.getPlayer();
+      if (player) {
+         // Pause the video
+         player.pause();
+         
+         // Reset to beginning
+         player.currentTime = 0;
+         
+         // Hide the video element
+         player.style.visibility = 'hidden';
+         
+         // Clear the poster
+         player.poster = '';
+         
+         // Remove all sources
+         const sources = player.querySelectorAll('source');
+         sources.forEach(source => source.remove());
+         
+         // Remove src attribute and reload to clear
+         player.removeAttribute('src');
+         player.load();
+         
+         console.log('✅ Current video cleared');
+      }
+      
+      // Clear current video reference
+      this.currentVideo = null;
+      
+      // Reset playhead position
+      if (this.playhead) {
+         this.playhead.style.left = '20px';
+      }
    }
 
    cleanupVideoResources() {
@@ -929,7 +1078,7 @@ class VideoLibraryApp {
 
       // Get videos from current project or legacy format
       const videos = this.currentProject?.dailies || this.project?.dailies || [];
-      
+
       if (videoIndex >= videos.length) return; // Clicked beyond videos
 
       // Calculate progress within the clicked video (0 to 1)
