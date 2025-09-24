@@ -28,7 +28,7 @@ export default class Header {
       this.dom.innerHTML = await req.text();
       console.log("[header] init done, returning", this.dom.innerHTML.length);
 
-      this.dom.querySelector('#projects-container').innerHTML = projects.dom.innerHTML;
+      this.dom.querySelector('#projects-container').append(projects.dom);
       return this.dom;
       /*
       this.addMenu();

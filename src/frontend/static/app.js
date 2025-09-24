@@ -26,7 +26,6 @@ class ViaUi {
       this.globalError = new GlobalError();
       this.ServerChecker = new ServerChecker();
       this.editor = new Editor();
-
       this.actionMenu = new ActionMenu(this.uiBuilder);
       this.footer = new Footer(this.uiBuilder);
       this.timeline = new Timeline();
@@ -69,11 +68,14 @@ class ViaUi {
          tree: {
             header: {
                projects: {}
-            }
+            },
+            editor: {},
+            
          },
          map: {
             'header': new Header(this.uiBuilder),
             'projects': new Projects(this.uiBuilder),
+            'editor': new Editor(),
          }
       }
       

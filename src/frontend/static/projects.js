@@ -17,15 +17,31 @@ export default class Projects {
    async init() 
    {
       this.dom = document.createElement('select');
-      this.dom.className = '';
+      this.dom.className = 'form-select'; // Bootstrap class for select
       this.dom.style.width = 'auto';
+      this.dom.style.minWidth = '200px'; // Ensure minimum width
       this.dom.id = 'projects';
       const option = document.createElement('option');
-      option.textContent = 'Loading.  projects!!!!...';
-      this.dom.append(option);
+      option.textContent = 'Loading projects...';
+      option.value = '';
+      this.dom.appendChild(option);
+      
+      // Debug logging
+      console.log('Select element created:', this.dom);
+      console.log('Select HTML:', this.dom.outerHTML);
+      console.log("project dom", this.dom);
+
+      this.dom.addEventListener('change', (event) => {
+         const selectedSlug = event.target.value;
+         console.log('Project selected!!!', selectedSlug);
+         this.setProject(selectedSlug);
+      });
       // FIXME: Might need to split init and and initProject to avoid race condition between dom elements
-      //this.initProjects();
       return this.dom;
+   }
+
+   async start() {
+      return this.initProjects();
    }
 
    async initProjects() {
@@ -37,7 +53,8 @@ export default class Projects {
          // Load basic project info and stats
          this.projects = data.projects;
          console.log('[projects] projects loaded', this.projects);
-         //this.updateProjects();
+         this.updateProjects();
+         this.loadProject();
          
       } else {
          throw Error("fail to load projects, server might be down");
@@ -45,12 +62,53 @@ export default class Projects {
       
    }
 
+   async loadProject() {
+      let project;
+      const slug = this.getProjectSlugFromUri();
+      if (slug) {
+         const project = this.projects.find(p => p.slug === slug);
+         if (project) {
+            console.log('🎬 Loading project from URI:', project.name);
+            // Load the project details
+            this.setProject(project.slug);
+         }
+         else {
+            throw new Error(`Project with slug "${selectedSlug}" not found.`);
+         }
+      }
+      else if(this.projects.length > 0) {
+         this.setProject(this.projects[0].slug);
+         console.log('🎬 Loading first project');
+         // Load the project details
+      }
+      else {
+         // FIXME
+         console.warn('FIXME: No projects available to load.');
+      }
+
+   }
+
+   setProject(slug) {
+
+      this.selectedSlug = slug;
+      this.dispatch("project_selected", { slug: slug });
+
+   }
+
+   dispatch(eventName, detail) {
+      const event = new CustomEvent(eventName, {
+            detail: detail,
+         });
+         console.log("dispatch event", eventName, detail);
+         document.dispatchEvent(event);
+   }
+
    updateProjects() {
       this.dom.innerHTML = '';
       this.projects.forEach(project => {
          const option = document.createElement('option');
          option.value = project.slug;
-         option.textContent = `${project.name} (${project.stats?.videos || 0} videos)`;
+         option.textContent = `${project.name}`;
          this.dom.appendChild(option);
       });
    }
@@ -60,122 +118,7 @@ export default class Projects {
       return urlParams.get('slug');
    }
 
-   refresh() {
-      const select = this.dom;
-      if (select) {
-         console.log('clearing select');
-         select.innerHTML = '';
-
-         select.addEventListener('change', async e => {
-            const selectedSlug = e.target.value;
-            if (selectedSlug && selectedSlug !== this.currentProjectSlug) {
-               //await this.domProject(selectedSlug);
-            }
-         });
-      } else {
-         throw new Error('No project select dom found.');
-      }
-   }
-
-   createProjectSelector() {
-      const div = document.createElement('div');
-      div.className = 'row align-items-center p-2 bg-dark col-md-3';
-      div.id = 'project-selector-container';
-      div.innerHTML = `
-                  <select id="project-select" class="" style="width: auto; min-width: 200px;">
-                     <option>Loading projects...</option>
-                  </select>
-              `;
-
-      //this.uiBuilder.container.querySelector('#projects').appendChild(div);
-      this.dom = div;
-      return div;
-   }
-
-   getUrlProjectId() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const projectId =
-         urlParams.get('project') || urlParams.get('projectId') || urlParams.get('id');
-      console.log('🔗 URL project parameter:', projectId);
-      return projectId;
-   }
-
    
-
-   async loadAllProjects(data) {
-      for (const project of data.projects) {
-         try {
-            // Get project details including stats
-            const detailResponse = await fetch(`${this.apiBaseUrl}/projects/${project.slug}`);
-            const detailData = await detailResponse.json();
-            //console.log('Project details:', detailData);
-            if (detailData.success) {
-               this.projects.push(detailData.project);
-            } else {
-               throw new Error(detailData.error || 'Unknown error fetching project details');
-            }
-         } catch (err) {
-            console.warn(`Could not load stats for ${project.slug}:`, err);
-            this.projects.push(project);
-         }
-      }
-   }
-
-   async selectProject(projectSlug) {
-      if (this.currentProjectSlug === projectSlug) {
-         console.log('Project already selected:', projectSlug);
-         return;
-      }
-
-      console.log('🎬 Selecting project:', projectSlug);
-      this.isLoading = true;
-
-      // Clear any currently playing video before switching projects
-
-      try {
-         // Use the project endpoint that includes videos (dailies)
-         const response = await fetch(`${this.apiBaseUrl}/projects/${projectSlug}/project`);
-         const data = await response.json();
-
-         if (response.ok && data) {
-            this.currentProject = data;
-            this.currentProjectSlug = projectSlug;
-
-            console.log('✅ Project loaded:', this.currentProject);
-            console.log('📹 Videos in project:', this.currentProject.dailies?.length || 0);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            urlParams.set('slug', projectSlug);
-            const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
-
-            window.history.pushState({}, '', newUrl);
-
-            console.log("📣 Dispatching 'project_selected' event");
-            const event = new CustomEvent('project_selected', {
-               detail: { project: this.currentProject },
-            });
-            document.dispatchEvent(event);
-
-            // Update UI
-            //this.updateProjectDisplay();
-            //this.loadEditor();
-            //this.loadDisplay();
-
-            // Update URL to reflect current project
-            //this.project.setId(projectSlug);
-         } else {
-            console.error('❌ Failed to load project:', data?.error || 'Unknown error');
-            this.showError('Failed to load project', data?.error || 'Unknown error');
-            // Keep video cleared since project failed to load
-         }
-      } catch (error) {
-         console.error('❌ Error loading project:', error);
-         this.showError('Connection Error', 'Could not load project data');
-         // Keep video cleared since project failed to load
-      } finally {
-         this.isLoading = false;
-      }
-   }
 
    updateProjectSelector() {
       if (!this.dom) {
