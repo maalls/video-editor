@@ -1,24 +1,17 @@
 {
-  "proxy": "http://localhost:3000",
-  "port": 3001,
-  "ui": {
-    "port": 3002
-  },
-  "files": [
-    "src/**/*"
-  ],
-  "watchOptions": {
-    "ignoreInitial": true,
-    "ignored": [
-      "node_modules",
-      "*.test.js",
-      "**/__tests__/**"
-    ]
-  },
-  "open": false,
-  "notify": false,
-  "logLevel": "info",
-  "reloadDelay": 300,
-  "injectChanges": true,
-  "codeSync": true
+   "proxy": "http://localhost:3000",
+   "port": 3001,
+   "ui": {
+      "port": 3002
+   },
+   "files": ["src/**/*"],
+   "watchOptions": {
+      "ignoreInitial": true,
+      "ignored": ["node_modules/**", "**/*.test.js", "**/__tests__/**", "src/backend/**"]
+   },
+   "open": false,
+   "notify": false,
+   "logLevel": "info",
+   "reloadDelay": 300,
+   "injectChanges": true
 }

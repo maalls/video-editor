@@ -1,0 +1,6 @@
+viai
+   header
+   top
+      player
+   main
+   footer
