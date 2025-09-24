@@ -8,59 +8,51 @@ export default class Projects {
       //this.parent = this.uiBuilder.container.querySelectorAll('');
       this.parent = null;
 
-      this.dom = document.createElement('select');
-      this.dom.innerHTML = 'fixme';
+      this.dom = null;
    }
 
    setParent(parent) {
       this.parent = parent;
    }
-   async init(childrens) 
+   async init() 
    {
-      console.log("[projects] init", childrens);
-      this.dom = document.createElement('div');
-      this.dom.innerHTML = 'FIXME: PROJECT SELECTOR';
+      this.dom = document.createElement('select');
+      this.dom.className = '';
+      this.dom.style.width = 'auto';
+      this.dom.id = 'projects';
+      const option = document.createElement('option');
+      option.textContent = 'Loading.  projects!!!!...';
+      this.dom.append(option);
+      // FIXME: Might need to split init and and initProject to avoid race condition between dom elements
+      //this.initProjects();
       return this.dom;
+   }
 
-      console.log("[projects] init", childrens);
-      /* 
-      TODO: for now we fetch it from here, but:
-      - must be handle by the UiBuilder from the User Tree definition.
-      - should be defined in the constructor by the UiBuilder.
-      */
-      console.log('[projects] parent:', this.parent);
-      /*if (!this.parent) {
-         console.error('❌ Could not find header element to attach project selector');
-         return;
-      }*/
-      await this.loadProjects();
-      // Set up project selector event handlers
-      this.refresh();
-
-      let targetProject = null;
-      const slug = this.getProjectSlugFromUri();
-
-      if (slug) {
-         // Try to find project by slug
-         targetProject = this.projects.find(p => p.slug === slug);
-         if (!targetProject) {
-            throw new Error(
-               `Project "${slug}" was not found. Loading first available project instead.`
-            );
-         }
-      } else {
-         targetProject = this.projects[0];
-      }
-
-      if (targetProject) {
-         //await this.domProject(targetProject.slug);
-      } else {
-         // FIXME: empty condition
-         //this.showEmptyState();
-      }
-      console.log("[projects] setting dom");
-      return this.dom;
+   async initProjects() {
       
+      const response = await fetch(`${this.apiBaseUrl}/projects`);
+      const data = await response.json();
+
+      if (data.success) {
+         // Load basic project info and stats
+         this.projects = data.projects;
+         console.log('[projects] projects loaded', this.projects);
+         //this.updateProjects();
+         
+      } else {
+         throw Error("fail to load projects, server might be down");
+      }
+      
+   }
+
+   updateProjects() {
+      this.dom.innerHTML = '';
+      this.projects.forEach(project => {
+         const option = document.createElement('option');
+         option.value = project.slug;
+         option.textContent = `${project.name} (${project.stats?.videos || 0} videos)`;
+         this.dom.appendChild(option);
+      });
    }
 
    getProjectSlugFromUri() {
@@ -108,35 +100,7 @@ export default class Projects {
       return projectId;
    }
 
-   async loadProjects() {
-      try {
-         const response = await fetch(`${this.apiBaseUrl}/projects`);
-         const data = await response.json();
-
-         if (data.success) {
-            // Load basic project info and stats
-            this.projects = data.projects;
-            console.log('[projects] projects loaded', this.projects);
-
-            // TODO: Must not load all projects!
-            //this.loadAllProjects(data);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            this.currentProjectSlug = urlParams.get('slug');
-            if (!this.currentProjectSlug) {
-               this.currentProjectSlug = this.projects[0]?.slug;
-            }
-
-            this.updateProjectSelector();
-         } else {
-            console.error('❌ Failed to load projects:', data.error);
-            this.showError('Failed to load projects', data.error);
-         }
-      } catch (error) {
-         console.error('❌ Error loading projects:', error);
-         this.showError('Connection Error', 'Could not connect to server');
-      }
-   }
+   
 
    async loadAllProjects(data) {
       for (const project of data.projects) {

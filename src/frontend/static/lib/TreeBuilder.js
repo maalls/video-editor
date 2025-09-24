@@ -6,7 +6,7 @@ export default class TreeBuilder {
     constructor(map) {
       this.map = map ? map : {};
       this.root = null;
-      console.log("Map initialized", this.map);
+      
     }
     // can use different trees with same map (Custom Ui)
     createTree(tree) {
@@ -17,10 +17,8 @@ export default class TreeBuilder {
          childrens: {}
       } 
 
-      i("Creating tree");
       this.addChildrens(this.root, tree);
-      o("Tree Created tree", this.root);
-
+      
       return this.root;
    }
 
@@ -43,7 +41,6 @@ export default class TreeBuilder {
          }
          
          this.addChildrens(parent.childrens[c], config_grand_childrens);
-         l("Created ", c);
          //this.addElements(child, parentDom);
       }
    }
