@@ -1,20 +1,41 @@
+class Helper {
+   static createTag(tagName, id, className = '') {
+      const element = document.createElement(tagName);
+      if (!id)
+         throw new Error('The Tree element requires an ID.', {
+            cause: new Error('Missing ID'),
+            tagName,
+            className,
+         });
+      element.id = id;
+      if (className) element.className = className;
+      return element;
+   }
+}
+
 export default class UiBuilder {
    constructor() {
-      this.container = null;
+      this.root = null;
    }
 
    async addApp(app) {
+
+      this.map = app.map || {};
       this.createTree(app.tree);
    }
 
    createTree(tree) {
-      this.container = this.createTag('div', 'root', 'main-container', 'container-fluid');
-      document.body.append(this.container);
-      const root = document.createElement('div');
+      this.root = Helper.createTag('div', 'root', 'main-container', 'container-fluid');
+      document.body.append(this.root);   
+      this.addChildrens(tree, this.root);   
+   }
+
+   addChildrens(childrens, parentDom) {
+      
    }
 
    addElements({ element, childrens }, parentDom) {
-      element = element || this.createTag('div', crypto.randomUUID());
+      element = element || Helper.createTag('div', crypto.randomUUID());
       parentDom = parentDom ? parentDom : document.body;
       //console.log('append', element, 'to', parentDom);
       parentDom.append(element);
@@ -30,28 +51,14 @@ export default class UiBuilder {
    }
 
    div(htmlContent = '', className = '') {
-      const element = this.createTag('div');
+      const element = Helper.createTag('div');
       element.innerHTML = htmlContent;
       if (className) element.className = className;
 
       return element;
    }
-
-   createTag(tagName, id, className = '') {
-      const element = document.createElement(tagName);
-      if (!id)
-         throw new Error('The Tree element requires an ID.', {
-            cause: new Error('Missing ID'),
-            tagName,
-            className,
-         });
-      element.id = id;
-      if (className) element.className = className;
-      return element;
-   }
-
    createBootstrapAlert(type, title, message) {
-      const alert = this.createTag('div', 'main-alert');
+      const alert = Helper.createTag('div', 'main-alert');
       alert.className = `alert alert-${type}`;
       alert.innerHTML = `
          <h4 class="alert-heading">${title}</h4>

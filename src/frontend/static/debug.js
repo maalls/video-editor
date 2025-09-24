@@ -33,12 +33,12 @@ export default class Debug {
          if (response.ok) {
             const config = await response.json();
             this.debugConfig = { ...this.debugConfig, ...config };
-            console.log('🐛 Debug config loaded:', this.debugConfig);
+            
          } else {
-            console.warn('⚠️ Could not load debug.json, using defaults');
+            throw new Error(`Failed to load debug config: ${response.statusText}`);
          }
       } catch (error) {
-         console.warn('⚠️ Error loading debug config:', error.message);
+         throw new Error(`Error loading debug config: ${error.message}`);
       }
    }
    toggleDebugMode() {

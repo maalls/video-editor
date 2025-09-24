@@ -18,8 +18,8 @@
       "dev:watch": "node --watch run.js",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
-      "lint": "eslint src/**/*.js",
-      "lint:fix": "eslint src/**/*.js --fix",
+      "lint": "eslint static/**/*.js",
+      "lint:fix": "eslint static/**/*.js --fix",
       "bootstrap:update": "cp node_modules/bootstrap/dist/css/bootstrap.min.css* src/frontend/static/vendor/bootstrap/ && cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* src/frontend/static/vendor/bootstrap/",
       "assets:update": "cp -r assets/robot_icon_pack/* src/frontend/static/assets/icons/",
       "assets:optimize": "echo 'Assets copied successfully! 🤖 VIAI icons are ready to use.'",
@@ -42,6 +42,7 @@
    "dependencies": {
       "bootstrap": "^5.3.8",
       "cors": "^2.8.5",
+      "crypto": "^1.0.1",
       "express": "^5.1.0"
    },
    "devDependencies": {

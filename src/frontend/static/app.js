@@ -11,10 +11,14 @@ import Timeline from './timeline.js';
 import ActionMenu from './action_menu.js';
 
 class ViaUi {
+
+
+   // FIXME: proper automation
+   
+
    constructor() {
       console.log('Launching VAI app...');
       this.uiBuilder = new UiBuilder();
-
       this.header = new Header(this.uiBuilder);
       this.projects = new Projects(this.uiBuilder);
       this.header.addProjects(this.projects);
@@ -27,38 +31,49 @@ class ViaUi {
       this.footer = new Footer(this.uiBuilder);
       this.timeline = new Timeline();
       this.debug = new Debug();
+
+      this.map = null;
    }
 
    async start() {
       this.app = {
          tree: {
             header: {
-               element: await this.header.create(),
-               childrens: {
-                  projects: {
-                     element: this.projects.createProjectSelector(),
-                  },
-                  /*actionMenu: {
-                     element: this.actionMenu.create() || null,
-                  },*/
+               projects: {
+                  //element: this.projects.createProjectSelector(),
                },
-            },
+               /*actionMenu: {
+                  element: this.actionMenu.create() || null,
+               },*/
+               },
             top: {
-               element: this.uiBuilder.createTag('div', 'top', 'top bg-light'),
-               childrens: {
-                  player: {
-                     element: this.projects.createPlayer(),
-                  },
-               },
+               /*player: {
+                  element: this.projects.createPlayer(),
+               },*/
+               player: {},
             },
+            /*
             main: {
                element: this.uiBuilder.createTag('div', 'main', 'main timeline'),
-            } /*
+            } 
+            */
+            main: {}
+            /*
             footer: {
                element: this.footer.create(),
             },*/,
+         }
+      }
+
+      this.app = {
+         tree: {
+            header: {}
          },
-      };
+         map: {
+            'header': new Header(this.uiBuilder),
+         }
+      }
+      
       await this.uiBuilder.addApp(this.app);
       //this.projects.init();
       //this.project.init();

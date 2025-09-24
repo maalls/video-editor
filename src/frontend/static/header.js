@@ -28,7 +28,7 @@ export default class Header {
       this.header.className = 'bg-primary text-white';
       const req = await fetch('/static/header.html');
       this.header.innerHTML = await req.text();
-      console.log('header', this.header.innerHTML);
+      console.log('header size', this.header.innerHTML.length);
       this.addMenu();
 
       this.header.querySelector('#projects-container').append(this.projects.select);
