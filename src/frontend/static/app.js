@@ -67,19 +67,18 @@ class ViaUi {
 
       this.app = {
          tree: {
-            header: {}
+            header: {
+               projects: {}
+            }
          },
          map: {
             'header': new Header(this.uiBuilder),
+            'projects': new Projects(this.uiBuilder),
          }
       }
       
       await this.uiBuilder.addApp(this.app);
-      //this.projects.init();
-      //this.project.init();
-      //this.timeline.init();
-      //this.debug.init();
-      //this.globalError.init();
+      
    }
 }
 const app = new ViaUi();

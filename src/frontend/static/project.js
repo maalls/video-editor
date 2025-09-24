@@ -236,7 +236,7 @@ export default class Project {
          </div>
       `;
    }
-
+   
    cleanupVideoResources() {
       // Method to clean up video resources and prevent memory leaks
       console.log('🧹 Cleaning up video resources...');

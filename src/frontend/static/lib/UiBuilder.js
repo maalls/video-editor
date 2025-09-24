@@ -1,3 +1,6 @@
+import DomBuilder from "./DomBuilder.js";
+import TreeBuilder  from "./TreeBuilder.js";
+
 class Helper {
    static createTag(tagName, id, className = '') {
       const element = document.createElement(tagName);
@@ -13,6 +16,8 @@ class Helper {
    }
 }
 
+
+
 export default class UiBuilder {
    constructor() {
       this.root = null;
@@ -20,21 +25,21 @@ export default class UiBuilder {
 
    async addApp(app) {
 
-      this.map = app.map || {};
-      this.createTree(app.tree);
+      this.tree = new TreeBuilder(app.map);
+      // layout
+      this.tree.createTree(app.tree);
+      this.dom = new DomBuilder(app.map);
+      // renderer
+      await this.dom.createDom(this.tree);
+      //this.init(this.root.dom, this.root.childrens);
    }
 
-   createTree(tree) {
-      this.root = Helper.createTag('div', 'root', 'main-container', 'container-fluid');
-      document.body.append(this.root);   
-      this.addChildrens(tree, this.root);   
-   }
 
-   addChildrens(childrens, parentDom) {
-      
-   }
+   
 
-   addElements({ element, childrens }, parentDom) {
+   
+
+   /*addElements({ element, childrens }, parentDom) {
       element = element || Helper.createTag('div', crypto.randomUUID());
       parentDom = parentDom ? parentDom : document.body;
       //console.log('append', element, 'to', parentDom);
@@ -48,7 +53,7 @@ export default class UiBuilder {
          const child = childrens[key];
          this.addElements(child, element);
       }
-   }
+   }*/
 
    div(htmlContent = '', className = '') {
       const element = Helper.createTag('div');
@@ -66,4 +71,5 @@ export default class UiBuilder {
       `;
       return alert;
    }
+
 }

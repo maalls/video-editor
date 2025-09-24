@@ -7,13 +7,22 @@ export default class Projects {
       this.uiBuilder = uiBuilder;
       //this.parent = this.uiBuilder.container.querySelectorAll('');
       this.parent = null;
-      this.select = document.createElement('select');
+
+      this.dom = document.createElement('select');
+      this.dom.innerHTML = 'fixme';
    }
 
    setParent(parent) {
       this.parent = parent;
    }
-   async init() {
+   async init(childrens) 
+   {
+      console.log("[projects] init", childrens);
+      this.dom = document.createElement('div');
+      this.dom.innerHTML = 'FIXME: PROJECT SELECTOR';
+      return this.dom;
+
+      console.log("[projects] init", childrens);
       /* 
       TODO: for now we fetch it from here, but:
       - must be handle by the UiBuilder from the User Tree definition.
@@ -44,11 +53,14 @@ export default class Projects {
       }
 
       if (targetProject) {
-         await this.selectProject(targetProject.slug);
+         //await this.domProject(targetProject.slug);
       } else {
          // FIXME: empty condition
          //this.showEmptyState();
       }
+      console.log("[projects] setting dom");
+      return this.dom;
+      
    }
 
    getProjectSlugFromUri() {
@@ -57,7 +69,7 @@ export default class Projects {
    }
 
    refresh() {
-      const select = this.select;
+      const select = this.dom;
       if (select) {
          console.log('clearing select');
          select.innerHTML = '';
@@ -65,7 +77,7 @@ export default class Projects {
          select.addEventListener('change', async e => {
             const selectedSlug = e.target.value;
             if (selectedSlug && selectedSlug !== this.currentProjectSlug) {
-               await this.selectProject(selectedSlug);
+               //await this.domProject(selectedSlug);
             }
          });
       } else {
@@ -84,7 +96,7 @@ export default class Projects {
               `;
 
       //this.uiBuilder.container.querySelector('#projects').appendChild(div);
-      this.select = div;
+      this.dom = div;
       return div;
    }
 
@@ -202,17 +214,17 @@ export default class Projects {
    }
 
    updateProjectSelector() {
-      if (!this.select) {
-         this.select = document.getElementById('project-select');
+      if (!this.dom) {
+         this.dom = document.getElementById('project-select');
       }
 
-      console.log('[projects] Updating project selector', this.select, this.projects);
+      console.log('[projects] Updating project selector', this.dom, this.projects);
 
-      if (!this.select) return;
-      this.select.innerHTML = '';
+      if (!this.dom) return;
+      this.dom.innerHTML = '';
       if (this.projects.length === 0) {
-         this.select.innerHTML = '<option>No projects available</option>';
-         this.select.disabled = true;
+         this.dom.innerHTML = '<option>No projects available</option>';
+         this.dom.disabled = true;
          return;
       }
 
@@ -220,14 +232,14 @@ export default class Projects {
          const option = document.createElement('option');
          option.value = project.slug;
          option.textContent = `${project.name} (${project.stats?.videos || 0} videos)`;
-         this.select.appendChild(option);
+         this.dom.appendChild(option);
       });
 
-      this.select.disabled = false;
+      this.dom.disabled = false;
 
-      // this.Select the current project if set
+      // this.dom the current project if set
       if (this.currentProjectSlug) {
-         this.select.value = this.currentProjectSlug;
+         this.dom.value = this.currentProjectSlug;
       }
    }
 
@@ -268,7 +280,7 @@ export default class Projects {
 
             // Reload projects and select the new one
             await this.loadProjects();
-            await this.selectProject(data.project.slug);
+            //await this.domProject(data.project.slug);
 
             // Show success message
             this.showSuccess('Project Created', `"${projectName}" has been created successfully!`);

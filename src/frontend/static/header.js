@@ -1,13 +1,9 @@
 export default class Header {
    constructor(uiBuilder) {
       this.uiBuilder = uiBuilder;
-      this.header = null;
+      this.dom = null;
       this.childrens = [];
       this.projects = null;
-   }
-
-   async init() {
-      this.create();
    }
 
    addProjects(projects) {
@@ -20,23 +16,30 @@ export default class Header {
    */
    add(child) {
       this.childrens.push(child);
-      child.setParent(this.header);
+      child.setParent(this.dom);
    }
 
-   async create() {
-      this.header = document.createElement('header');
-      this.header.className = 'bg-primary text-white';
+   async init({ projects }) {
+
+      console.log("[header] init with projects", projects);
+      this.dom = document.createElement('header');
+      this.dom.className = 'bg-primary text-white';
       const req = await fetch('/static/header.html');
-      this.header.innerHTML = await req.text();
-      console.log('header size', this.header.innerHTML.length);
+      this.dom.innerHTML = await req.text();
+      console.log("[header] init done, returning", this.dom.innerHTML.length);
+
+      this.dom.querySelector('#projects-container').innerHTML = projects.dom.innerHTML;
+      return this.dom;
+      /*
       this.addMenu();
 
-      this.header.querySelector('#projects-container').append(this.projects.select);
-      return this.header;
+      this.dom.querySelector('#projects-container').append(this.projects.select);
+      return this.dom;
+      */
    }
 
    addMenu() {
-      this.header
+      this.dom
          .querySelector('#menus')
          .insertAdjacentHTML(
             'beforeend',
