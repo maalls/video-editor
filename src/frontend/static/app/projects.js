@@ -25,12 +25,6 @@ export default class Projects {
       option.textContent = 'Loading projects...';
       option.value = '';
       this.dom.appendChild(option);
-
-      // Debug logging
-      console.log('Select element created:', this.dom);
-      console.log('Select HTML:', this.dom.outerHTML);
-      console.log('project dom', this.dom);
-
       this.dom.addEventListener('change', event => {
          const selectedSlug = event.target.value;
          console.log('Project selected!!!', selectedSlug);
@@ -50,7 +44,7 @@ export default class Projects {
       if (data.success) {
          // Load basic project info and stats
          this.projects = data.projects;
-         console.log('[projects] projects loaded', this.projects);
+
          this.updateProjects();
          this.loadProject();
       } else {
@@ -64,16 +58,12 @@ export default class Projects {
       if (slug) {
          const project = this.projects.find(p => p.slug === slug);
          if (project) {
-            console.log('🎬 Loading project from URI:', project.name);
-            // Load the project details
             this.setProject(project.slug);
          } else {
             throw new Error(`Project with slug "${selectedSlug}" not found.`);
          }
       } else if (this.projects.length > 0) {
          this.setProject(this.projects[0].slug);
-         console.log('🎬 Loading first project');
-         // Load the project details
       } else {
          // FIXME
          console.warn('FIXME: No projects available to load.');
@@ -89,7 +79,6 @@ export default class Projects {
       const event = new CustomEvent(eventName, {
          detail: detail,
       });
-      console.log('dispatch event', eventName, detail);
       document.dispatchEvent(event);
    }
 
@@ -112,9 +101,6 @@ export default class Projects {
       if (!this.dom) {
          this.dom = document.getElementById('project-select');
       }
-
-      console.log('[projects] Updating project selector', this.dom, this.projects);
-
       if (!this.dom) return;
       this.dom.innerHTML = '';
       if (this.projects.length === 0) {
@@ -139,8 +125,6 @@ export default class Projects {
    }
 
    selectVideo(video) {
-      console.log('📹 Selected video:', video);
-
       // Update the selected state in sidebar
       document.querySelectorAll('.list-group-item').forEach(item => {
          item.classList.remove('active');

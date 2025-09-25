@@ -38,4 +38,10 @@ class ViaUi {
    }
 }
 const app = new ViaUi();
-await app.start();
+
+try {
+   await app.start();
+} catch (error) {
+   console.error('Failed to start the app:', error);
+   throw error;
+}

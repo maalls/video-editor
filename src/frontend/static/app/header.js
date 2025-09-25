@@ -21,14 +21,10 @@ export default class Header {
    }
 
    async init({ projects, logo }) {
-      console.log('[header] init with logo', logo);
       this.dom = document.createElement('header');
       this.dom.className = 'bg-primary text-white';
       this.dom.innerHTML = await template.fetch('header');
-      console.log('[header] init done, returning', this.dom.innerHTML.length);
-
       this.dom.querySelector('#projects-container').append(projects.dom);
-
       this.dom.querySelector('#logo').append(logo.dom);
       return this.dom;
       /*

@@ -5,7 +5,6 @@ class Api {
 
    async get(endpoint) {
       const uri = `${this.baseUrl}${endpoint}`;
-      console.log(`API GET: ${uri}`);
       const response = await fetch(uri, {
          method: 'GET',
          headers: {
