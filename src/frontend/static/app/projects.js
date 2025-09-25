@@ -1,4 +1,4 @@
-import api from './api.js';
+import api from '../lib/api.js';
 export default class Projects {
    uiBuilder;
 

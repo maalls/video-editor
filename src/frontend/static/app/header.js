@@ -1,3 +1,4 @@
+import template from '../lib/Template.js';
 export default class Header {
    constructor(uiBuilder) {
       this.uiBuilder = uiBuilder;
@@ -10,8 +11,8 @@ export default class Header {
       this.projects = projects;
       this.add(projects);
    }
-   /* 
-   TODO: Investigate how this pattern could help the Tree builder 
+   /*
+   TODO: Investigate how this pattern could help the Tree builder
    for automating the creation of the relationships between entities.
    */
    add(child) {
@@ -19,15 +20,16 @@ export default class Header {
       child.setParent(this.dom);
    }
 
-   async init({ projects }) {
-      console.log('[header] init with projects', projects);
+   async init({ projects, logo }) {
+      console.log('[header] init with logo', logo);
       this.dom = document.createElement('header');
       this.dom.className = 'bg-primary text-white';
-      const req = await fetch('/static/header.html');
-      this.dom.innerHTML = await req.text();
+      this.dom.innerHTML = await template.fetch('header');
       console.log('[header] init done, returning', this.dom.innerHTML.length);
 
       this.dom.querySelector('#projects-container').append(projects.dom);
+
+      this.dom.querySelector('#logo').append(logo.dom);
       return this.dom;
       /*
       this.addMenu();
