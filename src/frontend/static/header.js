@@ -20,13 +20,12 @@ export default class Header {
    }
 
    async init({ projects }) {
-
-      console.log("[header] init with projects", projects);
+      console.log('[header] init with projects', projects);
       this.dom = document.createElement('header');
       this.dom.className = 'bg-primary text-white';
       const req = await fetch('/static/header.html');
       this.dom.innerHTML = await req.text();
-      console.log("[header] init done, returning", this.dom.innerHTML.length);
+      console.log('[header] init done, returning', this.dom.innerHTML.length);
 
       this.dom.querySelector('#projects-container').append(projects.dom);
       return this.dom;

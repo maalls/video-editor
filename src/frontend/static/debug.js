@@ -33,7 +33,6 @@ export default class Debug {
          if (response.ok) {
             const config = await response.json();
             this.debugConfig = { ...this.debugConfig, ...config };
-            
          } else {
             throw new Error(`Failed to load debug config: ${response.statusText}`);
          }

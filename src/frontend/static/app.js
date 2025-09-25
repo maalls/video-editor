@@ -12,10 +12,7 @@ import ActionMenu from './action_menu.js';
 import Player from './player.js';
 
 class ViaUi {
-
-
    // FIXME: proper automation
-   
 
    constructor() {
       console.log('Launching VAI app...');
@@ -45,7 +42,7 @@ class ViaUi {
                /*actionMenu: {
                   element: this.actionMenu.create() || null,
                },*/
-               },
+            },
             top: {
                /*player: {
                   element: this.projects.createPlayer(),
@@ -57,34 +54,32 @@ class ViaUi {
                element: this.uiBuilder.createTag('div', 'main', 'main timeline'),
             } 
             */
-            main: {}
+            main: {},
             /*
             footer: {
                element: this.footer.create(),
-            },*/,
-         }
-      }
+            },*/
+         },
+      };
 
       this.app = {
          tree: {
             header: {
-               projects: {}
+               projects: {},
             },
             editor: {
-               player: {}
+               player: {},
             },
-            
          },
          map: {
-            'header': new Header(this.uiBuilder),
-            'projects': new Projects(this.uiBuilder),
-            'editor': new Editor(),
-            'player': new Player(),
-         }
-      }
-      
+            header: new Header(this.uiBuilder),
+            projects: new Projects(this.uiBuilder),
+            editor: new Editor(),
+            player: new Player(),
+         },
+      };
+
       await this.uiBuilder.addApp(this.app);
-      
    }
 }
 const app = new ViaUi();

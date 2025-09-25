@@ -1,9 +1,9 @@
 {
-  "debug": true,
-  "check_server_connections": true,
-  "debug_timeline_clicks": true,
-  "show_video_metadata": false,
-  "log_video_events": true,
-  "connection_check_interval": 10000,
-  "server_health_check_interval": 300000
+   "debug": true,
+   "check_server_connections": true,
+   "debug_timeline_clicks": true,
+   "show_video_metadata": false,
+   "log_video_events": true,
+   "connection_check_interval": 10000,
+   "server_health_check_interval": 300000
 }

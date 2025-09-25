@@ -1,8 +1,7 @@
 let indent = 0;
 
 function l(...args) {
-   
-   if(indent) {
+   if (indent) {
       const prefix = indent ? ' '.repeat(indent * 3) : '';
       console.log(prefix, ...args);
    }

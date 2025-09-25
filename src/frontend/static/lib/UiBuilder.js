@@ -1,5 +1,5 @@
-import DomBuilder from "./DomBuilder.js";
-import TreeBuilder  from "./TreeBuilder.js";
+import DomBuilder from './DomBuilder.js';
+import TreeBuilder from './TreeBuilder.js';
 
 class Helper {
    static createTag(tagName, id, className = '') {
@@ -16,15 +16,12 @@ class Helper {
    }
 }
 
-
-
 export default class UiBuilder {
    constructor() {
       this.root = null;
    }
 
    async addApp(app) {
-
       this.tree = new TreeBuilder(app.map);
       // layout
       this.tree.createTree(app.tree);
@@ -33,11 +30,6 @@ export default class UiBuilder {
       await this.dom.createDom(this.tree);
       //this.init(this.root.dom, this.root.childrens);
    }
-
-
-   
-
-   
 
    /*addElements({ element, childrens }, parentDom) {
       element = element || Helper.createTag('div', crypto.randomUUID());
@@ -71,5 +63,4 @@ export default class UiBuilder {
       `;
       return alert;
    }
-
 }

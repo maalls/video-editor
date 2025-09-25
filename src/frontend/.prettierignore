@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Vendor files
+static/vendor/
+
+# Minified files
+*.min.js
+*.min.css
+
+# Generated files
+*.bundle.js

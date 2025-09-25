@@ -15,8 +15,7 @@ export default class Projects {
    setParent(parent) {
       this.parent = parent;
    }
-   async init() 
-   {
+   async init() {
       this.dom = document.createElement('select');
       this.dom.className = 'form-select'; // Bootstrap class for select
       this.dom.style.width = 'auto';
@@ -26,13 +25,13 @@ export default class Projects {
       option.textContent = 'Loading projects...';
       option.value = '';
       this.dom.appendChild(option);
-      
+
       // Debug logging
       console.log('Select element created:', this.dom);
       console.log('Select HTML:', this.dom.outerHTML);
-      console.log("project dom", this.dom);
+      console.log('project dom', this.dom);
 
-      this.dom.addEventListener('change', (event) => {
+      this.dom.addEventListener('change', event => {
          const selectedSlug = event.target.value;
          console.log('Project selected!!!', selectedSlug);
          this.setProject(selectedSlug);
@@ -46,7 +45,6 @@ export default class Projects {
    }
 
    async initProjects() {
-      
       const data = await api.get('/projects');
 
       if (data.success) {
@@ -55,11 +53,9 @@ export default class Projects {
          console.log('[projects] projects loaded', this.projects);
          this.updateProjects();
          this.loadProject();
-         
       } else {
-         throw Error("fail to load projects, server might be down");
+         throw Error('fail to load projects, server might be down');
       }
-      
    }
 
    async loadProject() {
@@ -71,36 +67,30 @@ export default class Projects {
             console.log('🎬 Loading project from URI:', project.name);
             // Load the project details
             this.setProject(project.slug);
-         }
-         else {
+         } else {
             throw new Error(`Project with slug "${selectedSlug}" not found.`);
          }
-      }
-      else if(this.projects.length > 0) {
+      } else if (this.projects.length > 0) {
          this.setProject(this.projects[0].slug);
          console.log('🎬 Loading first project');
          // Load the project details
-      }
-      else {
+      } else {
          // FIXME
          console.warn('FIXME: No projects available to load.');
       }
-
    }
 
    setProject(slug) {
-
       this.selectedSlug = slug;
-      this.dispatch("project_selected", { slug: slug });
-
+      this.dispatch('project_selected', { slug: slug });
    }
 
    dispatch(eventName, detail) {
       const event = new CustomEvent(eventName, {
-            detail: detail,
-         });
-         console.log("dispatch event", eventName, detail);
-         document.dispatchEvent(event);
+         detail: detail,
+      });
+      console.log('dispatch event', eventName, detail);
+      document.dispatchEvent(event);
    }
 
    updateProjects() {
@@ -117,8 +107,6 @@ export default class Projects {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get('slug');
    }
-
-   
 
    updateProjectSelector() {
       if (!this.dom) {
