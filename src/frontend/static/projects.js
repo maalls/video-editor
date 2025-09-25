@@ -1,3 +1,4 @@
+import api from './api.js';
 export default class Projects {
    uiBuilder;
 
@@ -46,8 +47,7 @@ export default class Projects {
 
    async initProjects() {
       
-      const response = await fetch(`${this.apiBaseUrl}/projects`);
-      const data = await response.json();
+      const data = await api.get('/projects');
 
       if (data.success) {
          // Load basic project info and stats

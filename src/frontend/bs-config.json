@@ -4,7 +4,7 @@
    "ui": {
       "port": 3002
    },
-   "files": ["src/**/*"],
+   "files": ["static/**/*"],
    "watchOptions": {
       "ignoreInitial": true,
       "ignored": ["node_modules/**", "**/*.test.js", "**/__tests__/**", "src/backend/**"]

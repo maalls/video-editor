@@ -9,6 +9,7 @@ import Header from './header.js';
 import Footer from './footer.js';
 import Timeline from './timeline.js';
 import ActionMenu from './action_menu.js';
+import Player from './player.js';
 
 class ViaUi {
 
@@ -69,13 +70,16 @@ class ViaUi {
             header: {
                projects: {}
             },
-            editor: {},
+            editor: {
+               player: {}
+            },
             
          },
          map: {
             'header': new Header(this.uiBuilder),
             'projects': new Projects(this.uiBuilder),
             'editor': new Editor(),
+            'player': new Player(),
          }
       }
       

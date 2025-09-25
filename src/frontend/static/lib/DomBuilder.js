@@ -18,9 +18,6 @@ export default class DomBuilder {
         for(const key in childrens) {
             tree.root.dom.append(childrens[key].dom);
         }
-
-        
-
     }
 
     async startRoot(tree) {
