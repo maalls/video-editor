@@ -12,13 +12,14 @@ export default class TreeBuilder {
          dom: null,
          childrens: {},
       };
-
+      console.log('createTree', tree);
       this.addChildrens(this.root, tree);
 
       return this.root;
    }
 
    addChildrens(parent, configChildrens) {
+      console.log('addChildrens', parent, configChildrens);
       for (let c in configChildrens) {
          if (!this.map[c]) {
             throw new Error(`The UiBuilder cannot find the component "${c}" in the map.`);

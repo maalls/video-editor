@@ -1,0 +1,40 @@
+<div
+   class="debug-dump"
+   style="
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 5px;
+   "
+>
+   <h3>🐛 Variable Dump</h3>
+
+   <h4>Project:</h4>
+   <ul>
+      <li>Name: {{project.name}}</li>
+      <li>Slug: {{project.slug}}</li>
+      <li>Video Count: {{project.stats.videoCount}}</li>
+   </ul>
+
+   <h4>User:</h4>
+   <ul>
+      <li>Name: {{user.name}}</li>
+      <li>Email: {{user.email}}</li>
+      <li>Role: {{user.role}}</li>
+   </ul>
+
+   <h4>State:</h4>
+   <ul>
+      <li>Is Loading: {{isLoading}}</li>
+      <li>Is Admin: {{isAdmin}}</li>
+      <li>Current Page: {{currentPage}}</li>
+   </ul>
+
+   <h4>Raw Values:</h4>
+   <pre style="background: #e9ecef; padding: 10px; border-radius: 3px">
+Title: "{{title}}"
+Count: {{count}}
+Status: {{status}}
+   </pre>
+</div>

@@ -22,9 +22,12 @@ export default class UiBuilder {
    }
 
    async addApp(app) {
+      console.log('app', app);
       this.tree = new TreeBuilder(app.map);
       // layout
       this.tree.createTree(app.tree);
+      console.log('tree', this.tree);
+
       this.dom = new DomBuilder(app.map);
       // renderer
       await this.dom.createDom(this.tree);

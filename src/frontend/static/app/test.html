@@ -1,0 +1,12 @@
+<div class="test-template">
+   <h1>{{title}}</h1>
+   <p>Welcome, {{username}}!</p>
+   <ul>
+      {{#projects}}
+      <li>{{name}} - {{description}}</li>
+      {{/projects}}
+   </ul>
+   {{#showButton}}
+   <button class="btn btn-primary">{{buttonText}}</button>
+   {{/showButton}}
+</div>

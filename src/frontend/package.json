@@ -21,7 +21,9 @@
       "lint": "eslint static/**/*.js",
       "lint:fix": "eslint static/**/*.js --fix",
       "bootstrap:update": "cp node_modules/bootstrap/dist/css/bootstrap.min.css* src/frontend/static/vendor/bootstrap/ && cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* src/frontend/static/vendor/bootstrap/",
-      "assets:update": "cp -r assets/robot_icon_pack/* src/frontend/static/assets/icons/",
+      "mustache:update": "mkdir -p static/vendor/mustache && cp node_modules/mustache/mustache.mjs static/vendor/mustache/",
+      "vendor:update": "npm run bootstrap:update && npm run mustache:update",
+      "assets:update": "cp -r assets/robot_icon_pack/* static/assets/icons/",
       "assets:optimize": "echo 'Assets copied successfully! 🤖 VIAI icons are ready to use.'",
       "deps:diff": "node tools/package-diff/bin/package-diff.js",
       "deps:since": "node tools/package-diff/bin/package-diff.js --since",
@@ -43,7 +45,8 @@
       "bootstrap": "^5.3.8",
       "cors": "^2.8.5",
       "crypto": "^1.0.1",
-      "express": "^5.1.0"
+      "express": "^5.1.0",
+      "mustache": "^4.2.0"
    },
    "devDependencies": {
       "@eslint/js": "^9.36.0",

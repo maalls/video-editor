@@ -1,0 +1,31 @@
+{
+   "name": "Demo Project",
+   "slug": "demo-project",
+   "created": "2025-09-22T14:00:32.360Z",
+   "lastAccessed": "2025-09-24T19:34:57.958Z",
+   "path": "/Users/malo/Sites/video-editor/playground/var/work/demo-project",
+   "preferences": {
+      "name": "Demo Project",
+      "slug": "demo-project",
+      "created": "2025-09-22T14:00:32.359Z",
+      "settings": {
+         "videoFormat": "MP4",
+         "compressionProfile": "workspace_basic",
+         "thumbnailQuality": "medium",
+         "autoGenerateThumbnails": true
+      },
+      "metadata": {
+         "description": "",
+         "tags": [],
+         "collaborators": []
+      }
+   },
+   "paths": {
+      "root": "/Users/malo/Sites/video-editor/playground/var/work/demo-project",
+      "dailies": "/Users/malo/Sites/video-editor/playground/var/work/demo-project/dailies",
+      "thumbnails": "/Users/malo/Sites/video-editor/playground/var/work/demo-project/thumbnails",
+      "database": "/Users/malo/Sites/video-editor/playground/var/work/demo-project/database.json",
+      "preferences": "/Users/malo/Sites/video-editor/playground/var/work/demo-project/preferences.json"
+   },
+   "dailies": []
+}

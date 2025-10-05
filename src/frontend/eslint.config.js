@@ -34,6 +34,7 @@ export default [
             getComputedStyle: 'readonly',
             IntersectionObserver: 'readonly',
             crypto: 'readonly',
+            DOMParser: 'readonly',
             // Node.js globals (for backend files)
             process: 'readonly',
             Buffer: 'readonly',

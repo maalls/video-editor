@@ -1,0 +1,17 @@
+<div class="variable-inspector">
+   <h2>🔍 Variable Inspector</h2>
+
+   <!-- Inspect any object -->
+   {{#data_children}}
+   <div class="property">
+      <span class="key">{{key}}</span>:
+      <span class="value">{{value}}</span>
+      <small class="type">({{type}})</small>
+   </div>
+   {{/data_children}}
+
+   <!-- If it's an array -->
+   {{#items}}
+   <div class="array-item">Item: {{.}}</div>
+   {{/items}}
+</div>
