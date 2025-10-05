@@ -7,20 +7,21 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 import Canvas from './Canvas.js';
 import Slider from './Slider.js';
 var Navigation = /*#__PURE__*/function () {
-  function Navigation(container, player, canvas) {
+  function Navigation(container, player) {
     _classCallCheck(this, Navigation);
     this.container = container;
     this.player = player;
-    this.canvas = canvas;
-    console.log("hello", canvas);
     this.canvasCtx = null; // Will be set in createVisualizer
     this.lastFrequencyData = null;
+    this.myCanvas = new Canvas();
+    this.canvas = this.myCanvas.createCanvas();
+    this.canvasCtx = this.canvas.getContext('2d');
   }
   return _createClass(Navigation, [{
     key: "togglePlayPause",
     value: function togglePlayPause() {
-      if (this.player.paused) {
-        this.player.play();
+      if (this.player.player.paused) {
+        this.player.player.play();
       } else {
         this.player.pause();
       }
@@ -28,26 +29,24 @@ var Navigation = /*#__PURE__*/function () {
   }, {
     key: "createVisualizer",
     value: function createVisualizer() {
+      var _this = this;
       var slider = new Slider();
 
       // Create minimalistic slider
       var s = slider.create();
-      this.container.appendChild(s);
-      this.timeoffsetContainer = document.createElement('div');
-      this.timeoffsetContainer.style.position = 'relative';
-      this.timeoffsetContainer.style.top = '0px';
-      this.timeoffsetContainer.style.left = '0px';
-      this.timeoffsetContainer.append(this.canvas);
-      this.container.append(this.timeoffsetContainer);
+      s.addEventListener(Slider.SLIDER_CHANGED_EVENT, function (e) {
+        console.log('Slider event received in Navigation:', _this.player.player.duration);
+        var timecode = Math.round(e.detail / 100 * _this.player.player.duration);
+        console.log('time code', timecode);
+        _this.player.seekTo(timecode);
+        // You can add functionality here (volume, seek, etc.)
+      });
+      this.sliderContainer = s;
+      this.container.appendChild(this.sliderContainer);
+      this.container.append(this.canvasElement);
       console.log("canvas", this.canvas);
-      this.canvasCtx = this.canvas.getContext('2d');
       this.setupAudioContext();
       this.addEventListeners();
-    }
-  }, {
-    key: "createSlider",
-    value: function createSlider() {
-      return this.slider.create();
     }
 
     // Method to update slider width if canvas width changes
@@ -73,7 +72,7 @@ var Navigation = /*#__PURE__*/function () {
     value: function setupAudioContext() {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
       this.analyser = this.audioContext.createAnalyser();
-      var audioSource = this.audioContext.createMediaElementSource(this.player);
+      var audioSource = this.audioContext.createMediaElementSource(this.player.player);
       this.analyser.fftSize = 256;
       audioSource.connect(this.analyser);
       this.analyser.connect(this.audioContext.destination);
@@ -81,44 +80,44 @@ var Navigation = /*#__PURE__*/function () {
   }, {
     key: "addEventListeners",
     value: function addEventListeners() {
-      var _this = this;
+      var _this2 = this;
       this.canvas.addEventListener('click', function () {
         console.log('clickedss');
-        _this.togglePlayPause();
+        _this2.togglePlayPause();
       });
 
       // Timeline tracking
-      this.player.addEventListener('timeupdate', function () {
+      this.player.player.addEventListener('timeupdate', function () {
         //console.log(`Timeline: ${(this.player.currentTime * 1000).toFixed(0)}ms / ${(this.player.duration * 1000).toFixed(0)}ms`);
       });
 
       // Random start position
-      this.player.addEventListener('loadedmetadata', function () {
-        var randomTime = Math.random() * _this.player.duration;
-        _this.player.currentTime = randomTime;
+      this.player.player.addEventListener('loadedmetadata', function () {
+        var randomTime = Math.random() * _this2.player.duration;
+        _this2.player.currentTime = randomTime;
         console.log("Random start position: ".concat((randomTime * 1000).toFixed(0), "ms (").concat(randomTime.toFixed(3), "s)"));
       });
 
       // Start visualization
-      this.player.addEventListener('play', function () {
-        _this.isPlaying = true;
-        _this.audioContext.resume().then(function () {
-          _this.drawWave();
+      this.player.player.addEventListener('play', function () {
+        _this2.isPlaying = true;
+        _this2.audioContext.resume().then(function () {
+          _this2.drawWave();
         });
       });
 
       // Stop visualization when paused
-      this.player.addEventListener('pause', function () {
-        _this.isPlaying = false;
-        if (_this.animationId) {
-          cancelAnimationFrame(_this.animationId);
-          _this.animationId = null;
+      this.player.player.addEventListener('pause', function () {
+        _this2.isPlaying = false;
+        if (_this2.animationId) {
+          cancelAnimationFrame(_this2.animationId);
+          _this2.animationId = null;
         }
       });
 
       // Add keyboard controls for swift navigation
       document.addEventListener('keydown', function (event) {
-        _this.handleKeyboardControls(event);
+        _this2.handleKeyboardControls(event);
       });
     }
   }, {
@@ -145,10 +144,10 @@ var Navigation = /*#__PURE__*/function () {
   }, {
     key: "drawWave",
     value: function drawWave() {
-      var _this2 = this;
+      var _this3 = this;
       if (!this.isPlaying) return;
       this.animationId = requestAnimationFrame(function () {
-        return _this2.drawWave();
+        return _this3.drawWave();
       });
 
       //this.url.searchParams.set('time', this.player.currentTime);

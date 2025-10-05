@@ -2,19 +2,20 @@ import Canvas from './Canvas.js';
 import Slider from './Slider.js';
 export default class Navigation {
 
-    constructor(container, player, canvas) {
+    constructor(container, player) {
         this.container = container;
         this.player = player;
-        this.canvas = canvas;
-        console.log("hello", canvas);
         this.canvasCtx = null; // Will be set in createVisualizer
         this.lastFrequencyData = null;
-    
+
+        this.myCanvas = new Canvas();
+        this.canvas = this.myCanvas.createCanvas();
+        this.canvasCtx = this.canvas.getContext('2d');
     }
 
     togglePlayPause() {
-        if (this.player.paused) {
-            this.player.play();
+        if (this.player.player.paused) {
+            this.player.player.play();
         } else {
             this.player.pause();
         }
@@ -26,23 +27,23 @@ export default class Navigation {
 
         // Create minimalistic slider
         const s = slider.create();
-        this.container.appendChild(s);
-        this.timeoffsetContainer = document.createElement('div');
-        this.timeoffsetContainer.style.position = 'relative';
-        this.timeoffsetContainer.style.top = '0px';
-        this.timeoffsetContainer.style.left = '0px';
-        this.timeoffsetContainer.append(this.canvas);
-        this.container.append(this.timeoffsetContainer);
+        s.addEventListener(Slider.SLIDER_CHANGED_EVENT, (e) => {
+            console.log('Slider event received in Navigation:', this.player.player.duration);
+            const timecode = Math.round(e.detail / 100 * this.player.player.duration);
+            console.log('time code', timecode);
+            this.player.seekTo(timecode);
+            // You can add functionality here (volume, seek, etc.)
+        });
+        this.sliderContainer = s;
+        this.container.appendChild(this.sliderContainer);
+        this.container.append(this.canvasElement);
         console.log("canvas", this.canvas);
-        this.canvasCtx = this.canvas.getContext('2d');
-
+    
         this.setupAudioContext();
         this.addEventListeners();
     }
 
-    createSlider() {
-        return this.slider.create();
-    }
+    
 
     // Method to update slider width if canvas width changes
     updateSliderWidth() {
@@ -62,7 +63,7 @@ export default class Navigation {
     setupAudioContext() {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.analyser = this.audioContext.createAnalyser();
-        const audioSource = this.audioContext.createMediaElementSource(this.player);
+        const audioSource = this.audioContext.createMediaElementSource(this.player.player);
         
         this.analyser.fftSize = 256;
         
@@ -78,19 +79,19 @@ export default class Navigation {
         });
 
         // Timeline tracking
-        this.player.addEventListener('timeupdate', () => {
+        this.player.player.addEventListener('timeupdate', () => {
             //console.log(`Timeline: ${(this.player.currentTime * 1000).toFixed(0)}ms / ${(this.player.duration * 1000).toFixed(0)}ms`);
         });
 
         // Random start position
-        this.player.addEventListener('loadedmetadata', () => {
+        this.player.player.addEventListener('loadedmetadata', () => {
             const randomTime = Math.random() * this.player.duration;
             this.player.currentTime = randomTime;
             console.log(`Random start position: ${(randomTime * 1000).toFixed(0)}ms (${randomTime.toFixed(3)}s)`);
         });
 
         // Start visualization
-        this.player.addEventListener('play', () => {
+        this.player.player.addEventListener('play', () => {
             this.isPlaying = true;
             this.audioContext.resume().then(() => {
                 this.drawWave();
@@ -98,7 +99,7 @@ export default class Navigation {
         });
 
         // Stop visualization when paused
-        this.player.addEventListener('pause', () => {
+        this.player.player.addEventListener('pause', () => {
             this.isPlaying = false;
             if (this.animationId) {
                 cancelAnimationFrame(this.animationId);

@@ -1,8 +1,7 @@
 // PlayerManager.js - Handles all player-related initialization and setup
 import { AudioPlayer } from './AudioPlayer.js';
 import Navigation from "./Navigation.js";
-import Canvas
- from './Canvas.js';
+import Canvas from './Canvas.js';
 export class PlayerManager {
     constructor() {
         this.audioPlayer = null;
@@ -16,15 +15,18 @@ export class PlayerManager {
             await this.audioPlayer.init(audioSrc);
 
             
-            this.canvas = new Canvas();
-            const canvasElement = this.canvas.createCanvas(); // Get the actual DOM element
+             // Get the actual DOM element
 
-            this.navigation = new Navigation(containerElement, this.audioPlayer.player, canvasElement);
+            this.navigation = new Navigation(containerElement, this.audioPlayer);
             this.navigation.createVisualizer();
             // Make seekTo available globally for console usage
             window.seekTo = (time, unit) => this.audioPlayer.seekTo(time, unit);
             
             // Auto-play
+
+            this.audioPlayer.player.addEventListener('play', async () => {
+            });
+
             await this.audioPlayer.play();
             
             console.log('Audio player initialized successfully');

@@ -21,21 +21,21 @@ export var PlayerManager = /*#__PURE__*/function () {
   return _createClass(PlayerManager, [{
     key: "initializePlayer",
     value: function () {
-      var _initializePlayer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(containerElement, audioSrc) {
+      var _initializePlayer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(containerElement, audioSrc) {
         var _this = this;
-        var canvasElement, _t;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.p = _context.n) {
+        var _t;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.p = _context2.n) {
             case 0:
-              _context.p = 0;
+              _context2.p = 0;
               // Initialize audio player
               this.audioPlayer = new AudioPlayer(containerElement);
-              _context.n = 1;
+              _context2.n = 1;
               return this.audioPlayer.init(audioSrc);
             case 1:
-              this.canvas = new Canvas();
-              canvasElement = this.canvas.createCanvas(); // Get the actual DOM element
-              this.navigation = new Navigation(containerElement, this.audioPlayer.player, canvasElement);
+              // Get the actual DOM element
+
+              this.navigation = new Navigation(containerElement, this.audioPlayer);
               this.navigation.createVisualizer();
               // Make seekTo available globally for console usage
               window.seekTo = function (time, unit) {
@@ -43,20 +43,29 @@ export var PlayerManager = /*#__PURE__*/function () {
               };
 
               // Auto-play
-              _context.n = 2;
+
+              this.audioPlayer.player.addEventListener('play', /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+                return _regenerator().w(function (_context) {
+                  while (1) switch (_context.n) {
+                    case 0:
+                      return _context.a(2);
+                  }
+                }, _callee);
+              })));
+              _context2.n = 2;
               return this.audioPlayer.play();
             case 2:
               console.log('Audio player initialized successfully');
-              return _context.a(2, this.audioPlayer);
+              return _context2.a(2, this.audioPlayer);
             case 3:
-              _context.p = 3;
-              _t = _context.v;
+              _context2.p = 3;
+              _t = _context2.v;
               console.error('Error initializing audio player:', _t);
               throw _t;
             case 4:
-              return _context.a(2);
+              return _context2.a(2);
           }
-        }, _callee, this, [[0, 3]]);
+        }, _callee2, this, [[0, 3]]);
       }));
       function initializePlayer(_x, _x2) {
         return _initializePlayer.apply(this, arguments);
@@ -71,17 +80,17 @@ export var PlayerManager = /*#__PURE__*/function () {
   }, {
     key: "loadAudioFromProject",
     value: function () {
-      var _loadAudioFromProject = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(projectData) {
+      var _loadAudioFromProject = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(projectData) {
         var audioSrc;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
             case 0:
               // You can extend this to read audio source from project data
               // For now, using the hardcoded path
               audioSrc = "./var/data/chris-shop/christophe-entrepot.m4a";
-              return _context2.a(2, audioSrc);
+              return _context3.a(2, audioSrc);
           }
-        }, _callee2);
+        }, _callee3);
       }));
       function loadAudioFromProject(_x3) {
         return _loadAudioFromProject.apply(this, arguments);
