@@ -8,125 +8,146 @@ function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = 
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-// AudioPlayer.js - ES Module
-export var AudioPlayer = /*#__PURE__*/function () {
-  function AudioPlayer(containerElement) {
-    _classCallCheck(this, AudioPlayer);
-    this.container = containerElement;
-    this.player = null;
-    this.isPlaying = false;
-    this.url = new URL(window.location);
+import { PlayerManager } from './PlayerManager.js';
+var App = /*#__PURE__*/function () {
+  function App() {
+    _classCallCheck(this, App);
+    this.playerManager = new PlayerManager();
+    this.projectData = null;
   }
-  return _createClass(AudioPlayer, [{
-    key: "init",
-    value: function init(audioSrc) {
-      var _this = this;
-      this.player = document.createElement("audio");
-      var source = document.createElement("source");
-      this.player.setAttribute('controls', true);
-      this.player.setAttribute('preload', 'metadata');
-      source.src = audioSrc;
-      source.type = "audio/mpeg";
-      this.player.appendChild(source);
-      this.player.addEventListener('loadedmetadata', function () {
-        console.log("Audio duration: ".concat((_this.player.duration * 1000).toFixed(0), "ms (").concat(_this.player.duration.toFixed(3), "s)"));
-        var time = _this.url.searchParams.get('time');
-        if (time) {
-          var value = _this.parseTimeParam(time);
-          if (value) {
-            _this.player.currentTime = value;
-          } else if (time == "random") {
-            var randomTime = Math.random() * _this.player.duration;
-            _this.player.currentTime = randomTime;
-          }
-        }
-      });
-      return this.player;
-    }
 
-    /*
-     
-    Parse time parameter from URL (e.g., "time=00h00m01s069ms" to seconds)
-     */
-  }, {
-    key: "parseTimeParam",
-    value: function parseTimeParam(timeString) {
-      var regex = /(\d{2})h(\d{2})m(\d{2})s(\d{3})ms/;
-      var match = timeString.match(regex);
-      if (match) {
-        var hours = parseInt(match[1], 10);
-        var minutes = parseInt(match[2], 10);
-        var seconds = parseInt(match[3], 10);
-        var milliseconds = parseInt(match[4], 10);
-        return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
-      }
-      return 0;
-    }
-  }, {
-    key: "togglePlayPause",
-    value: function togglePlayPause() {
-      if (this.player.player.paused) {
-        this.player.play();
-      } else {
-        this.player.player.pause();
-      }
-    }
-  }, {
-    key: "seekTo",
-    value: function seekTo(time) {
-      var unit = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'seconds';
-      var timeInSeconds;
-      if (unit === 'ms' || unit === 'milliseconds') {
-        timeInSeconds = time / 1000;
-      } else {
-        timeInSeconds = time;
-      }
-      if (timeInSeconds >= 0 && timeInSeconds <= this.player.duration) {
-        this.player.currentTime = timeInSeconds;
-        console.log("Seeking to: ".concat((timeInSeconds * 1000).toFixed(0), "ms (").concat(timeInSeconds.toFixed(3), "s)"));
-      } else {
-        console.error("Invalid time: ".concat(time).concat(unit, ". Must be between 0 and ").concat((this.player.duration * 1000).toFixed(0), "ms"));
-      }
-    }
-  }, {
-    key: "play",
+  // Load project configuration
+  return _createClass(App, [{
+    key: "loadProjectData",
     value: function () {
-      var _play = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var _t;
+      var _loadProjectData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+        var response, _t;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.p = _context.n) {
             case 0:
               _context.p = 0;
               _context.n = 1;
-              return this.player.play();
+              return fetch('project.json');
             case 1:
-              _context.n = 3;
-              break;
+              response = _context.v;
+              _context.n = 2;
+              return response.json();
             case 2:
-              _context.p = 2;
-              _t = _context.v;
-              console.error('Error playing audio:', _t);
+              this.projectData = _context.v;
+              console.log('Project data loaded:', this.projectData);
+              return _context.a(2, this.projectData);
             case 3:
+              _context.p = 3;
+              _t = _context.v;
+              console.error('Error loading project.json:', _t);
+              throw _t;
+            case 4:
               return _context.a(2);
           }
-        }, _callee, this, [[0, 2]]);
+        }, _callee, this, [[0, 3]]);
       }));
-      function play() {
-        return _play.apply(this, arguments);
+      function loadProjectData() {
+        return _loadProjectData.apply(this, arguments);
       }
-      return play;
+      return loadProjectData;
+    }() // Initialize the audio player
+  }, {
+    key: "initializePlayer",
+    value: function () {
+      var _initializePlayer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+        var view, audioSrc, _t2;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.p = _context2.n) {
+            case 0:
+              _context2.p = 0;
+              view = document.getElementById('view');
+              _context2.n = 1;
+              return this.playerManager.loadAudioFromProject(this.projectData);
+            case 1:
+              audioSrc = _context2.v;
+              _context2.n = 2;
+              return this.playerManager.initializePlayer(view, audioSrc);
+            case 2:
+              _context2.n = 4;
+              break;
+            case 3:
+              _context2.p = 3;
+              _t2 = _context2.v;
+              console.error('Error initializing player:', _t2);
+            case 4:
+              return _context2.a(2);
+          }
+        }, _callee2, this, [[0, 3]]);
+      }));
+      function initializePlayer() {
+        return _initializePlayer.apply(this, arguments);
+      }
+      return initializePlayer;
+    }() // Start the application
+  }, {
+    key: "start",
+    value: function () {
+      var _start = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+        var _t3;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.p = _context3.n) {
+            case 0:
+              _context3.p = 0;
+              _context3.n = 1;
+              return this.initializeProject();
+            case 1:
+              _context3.n = 2;
+              return this.initializePlayer();
+            case 2:
+              console.log('Application started successfully');
+              _context3.n = 4;
+              break;
+            case 3:
+              _context3.p = 3;
+              _t3 = _context3.v;
+              console.error('Error starting application:', _t3);
+            case 4:
+              return _context3.a(2);
+          }
+        }, _callee3, this, [[0, 3]]);
+      }));
+      function start() {
+        return _start.apply(this, arguments);
+      }
+      return start;
     }()
   }, {
-    key: "formatTime",
-    value: function formatTime(timeInSeconds) {
-      //console.log("format time", timeInSeconds);
-      var minutes = Math.floor(timeInSeconds / 60);
-      var seconds = Math.floor(timeInSeconds % 60);
-      var hours = Math.floor(timeInSeconds / 3600);
-      var milliseconds = Math.floor(timeInSeconds % 1 * 1000);
-      //console.log("formatted time", 'h', hours, 'm', minutes, 's', seconds, 'ms', milliseconds);
-
-      return "".concat(String(hours).padStart(2, '0'), "h").concat(String(minutes).padStart(2, '0'), "m").concat(String(seconds).padStart(2, '0'), "s").concat(String(milliseconds).padStart(3, '0'), "ms");
-    }
+    key: "initializeProject",
+    value: function () {
+      var _initializeProject = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+        var loading, bar, body;
+        return _regenerator().w(function (_context4) {
+          while (1) switch (_context4.n) {
+            case 0:
+              _context4.n = 1;
+              return this.loadProjectData();
+            case 1:
+              loading = document.getElementById('loading');
+              loading.style.display = 'none';
+              bar = document.getElementById('bar');
+              bar.style.textAlign = 'left';
+              bar.innerHTML = "<pre>" + JSON.stringify(this.projectData, null, 2) + "</pre>";
+              console.log("YO");
+              body = document.body;
+              body.addEventListener('monitor', function (event) {
+                console.log("monitor", event.detail.currentTime);
+                bar.innerHTML = "<pre>" + event.detail.currentTime + "</pre>";
+              });
+            case 2:
+              return _context4.a(2);
+          }
+        }, _callee4, this);
+      }));
+      function initializeProject() {
+        return _initializeProject.apply(this, arguments);
+      }
+      return initializeProject;
+    }()
   }]);
 }();
+export { App as default };

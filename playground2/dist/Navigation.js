@@ -23,7 +23,7 @@ var Navigation = /*#__PURE__*/function () {
       if (this.player.player.paused) {
         this.player.player.play();
       } else {
-        this.player.pause();
+        this.player.player.pause();
       }
     }
   }, {
@@ -36,14 +36,14 @@ var Navigation = /*#__PURE__*/function () {
       var s = slider.create();
       s.addEventListener(Slider.SLIDER_CHANGED_EVENT, function (e) {
         console.log('Slider event received in Navigation:', _this.player.player.duration);
-        var timecode = Math.round(e.detail / 100 * _this.player.player.duration);
-        console.log('time code', timecode);
-        _this.player.seekTo(timecode);
+        var canvasWidth = Math.min(_this.myCanvas.baseWidth, Math.max(200, Math.round(e.detail / 100 * _this.myCanvas.baseWidth)));
+        console.log('canvas width', canvasWidth);
+        _this.resizeCanvas(canvasWidth, _this.canvas.height);
         // You can add functionality here (volume, seek, etc.)
       });
       this.sliderContainer = s;
-      this.container.appendChild(this.sliderContainer);
-      this.container.append(this.canvasElement);
+      this.container.append(this.sliderContainer);
+      this.container.append(this.canvas);
       console.log("canvas", this.canvas);
       this.setupAudioContext();
       this.addEventListeners();
@@ -54,7 +54,7 @@ var Navigation = /*#__PURE__*/function () {
     key: "updateSliderWidth",
     value: function updateSliderWidth() {
       if (this.sliderContainer && this.canvas) {
-        this.sliderContainer.style.width = this.canvas.width + 'px';
+        //this.sliderContainer.style.width = this.canvas.width + 'px';
       }
     }
 
@@ -83,6 +83,12 @@ var Navigation = /*#__PURE__*/function () {
       var _this2 = this;
       this.canvas.addEventListener('click', function () {
         console.log('clickedss');
+        var event = new CustomEvent('monitor', {
+          detail: {
+            currentTime: _this2.player.player.currentTime
+          }
+        });
+        document.body.dispatchEvent(event);
         _this2.togglePlayPause();
       });
 

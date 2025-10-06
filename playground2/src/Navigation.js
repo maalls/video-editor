@@ -7,7 +7,6 @@ export default class Navigation {
         this.player = player;
         this.canvasCtx = null; // Will be set in createVisualizer
         this.lastFrequencyData = null;
-
         this.myCanvas = new Canvas();
         this.canvas = this.myCanvas.createCanvas();
         this.canvasCtx = this.canvas.getContext('2d');
@@ -17,7 +16,7 @@ export default class Navigation {
         if (this.player.player.paused) {
             this.player.player.play();
         } else {
-            this.player.pause();
+            this.player.player.pause();
         }
     }
 
@@ -29,14 +28,14 @@ export default class Navigation {
         const s = slider.create();
         s.addEventListener(Slider.SLIDER_CHANGED_EVENT, (e) => {
             console.log('Slider event received in Navigation:', this.player.player.duration);
-            const timecode = Math.round(e.detail / 100 * this.player.player.duration);
-            console.log('time code', timecode);
-            this.player.seekTo(timecode);
+            const canvasWidth = Math.min(this.myCanvas.baseWidth, Math.max(200, Math.round(e.detail / 100 * this.myCanvas.baseWidth)));
+            console.log('canvas width', canvasWidth);
+            this.resizeCanvas(canvasWidth, this.canvas.height);
             // You can add functionality here (volume, seek, etc.)
         });
         this.sliderContainer = s;
-        this.container.appendChild(this.sliderContainer);
-        this.container.append(this.canvasElement);
+        this.container.append(this.sliderContainer);
+        this.container.append(this.canvas);
         console.log("canvas", this.canvas);
     
         this.setupAudioContext();
@@ -48,7 +47,7 @@ export default class Navigation {
     // Method to update slider width if canvas width changes
     updateSliderWidth() {
         if (this.sliderContainer && this.canvas) {
-            this.sliderContainer.style.width = this.canvas.width + 'px';
+            //this.sliderContainer.style.width = this.canvas.width + 'px';
         }
     }
 
@@ -75,6 +74,8 @@ export default class Navigation {
 
         this.canvas.addEventListener('click', () => {
             console.log('clickedss');
+            const event = new CustomEvent('monitor', { detail: { currentTime: this.player.player.currentTime} });
+            document.body.dispatchEvent(event);
             this.togglePlayPause();
         });
 

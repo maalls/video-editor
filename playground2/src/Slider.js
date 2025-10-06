@@ -11,8 +11,8 @@ export default class Slider {
         this.sliderContainer = document.createElement('div');
         this.sliderContainer.className = 'minimal-slider-container';
         
-        this.sliderContainer.style.width = 1000 + 'px';
-        
+        this.sliderContainer.style.width = 300 + 'px';
+        this.sliderContainer.style.border = '1px solid green';
         // Create the slider input
         this.slider = document.createElement('input');
         this.slider.type = 'range';

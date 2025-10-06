@@ -11,7 +11,6 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 // PlayerManager.js - Handles all player-related initialization and setup
 import { AudioPlayer } from './AudioPlayer.js';
 import Navigation from "./Navigation.js";
-import Canvas from './Canvas.js';
 export var PlayerManager = /*#__PURE__*/function () {
   function PlayerManager() {
     _classCallCheck(this, PlayerManager);
@@ -22,25 +21,23 @@ export var PlayerManager = /*#__PURE__*/function () {
     key: "initializePlayer",
     value: function () {
       var _initializePlayer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(containerElement, audioSrc) {
-        var _this = this;
-        var _t;
+        var player, _t;
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.p = _context2.n) {
             case 0:
               _context2.p = 0;
               // Initialize audio player
-              this.audioPlayer = new AudioPlayer(containerElement);
+              this.audioPlayer = new AudioPlayer();
               _context2.n = 1;
               return this.audioPlayer.init(audioSrc);
             case 1:
-              // Get the actual DOM element
+              player = _context2.v;
+              player.style.border = "1px solid blue";
+              containerElement.append(player);
 
+              // Get the actual DOM element
               this.navigation = new Navigation(containerElement, this.audioPlayer);
               this.navigation.createVisualizer();
-              // Make seekTo available globally for console usage
-              window.seekTo = function (time, unit) {
-                return _this.audioPlayer.seekTo(time, unit);
-              };
 
               // Auto-play
 

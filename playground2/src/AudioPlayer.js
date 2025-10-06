@@ -1,5 +1,4 @@
 // AudioPlayer.js - ES Module
-import Navigation from "./Navigation.js";
 export class AudioPlayer {
     constructor(containerElement) {
         this.container = containerElement;
@@ -9,6 +8,7 @@ export class AudioPlayer {
     }
 
     init(audioSrc) {
+
         this.player = document.createElement("audio");
         const source = document.createElement("source");
         this.player.setAttribute('controls', true);
@@ -16,14 +16,51 @@ export class AudioPlayer {
         source.src = audioSrc;
         source.type = "audio/mpeg";
         this.player.appendChild(source);
-        this.container.append(this.player);
+        
+
+        this.player.addEventListener('loadedmetadata', () => {
+            console.log(`Audio duration: ${(this.player.duration * 1000).toFixed(0)}ms (${this.player.duration.toFixed(3)}s)`);
+            const time = this.url.searchParams.get('time');
+            if (time) {
+                const value = this.parseTimeParam(time);
+
+                if(value) {
+                    this.player.currentTime = value;
+                }
+                else if(time == "random") {
+                    const randomTime = Math.random() * this.player.duration;
+                    this.player.currentTime = randomTime;
+                }
+            }
+        });
+
+        return this.player;
+
+    }
+
+    /*
+     
+    Parse time parameter from URL (e.g., "time=00h00m01s069ms" to seconds)
+
+    */
+    parseTimeParam(timeString) {
+        const regex = /(\d{2})h(\d{2})m(\d{2})s(\d{3})ms/;
+        const match = timeString.match(regex);
+        if (match) {
+            const hours = parseInt(match[1], 10);
+            const minutes = parseInt(match[2], 10);
+            const seconds = parseInt(match[3], 10);
+            const milliseconds = parseInt(match[4], 10);
+            return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+        }
+        return 0;
     }
 
     togglePlayPause() {
-        if (this.player.paused) {
+        if (this.player.player.paused) {
             this.player.play();
         } else {
-            this.player.pause();
+            this.player.player.pause();
         }
     }
 
@@ -46,12 +83,12 @@ export class AudioPlayer {
 
     async play() {
         try {
-            this.urlInterval = setInterval(() => {
+            /*this.urlInterval = setInterval(() => {
 
                 const formattedTime = this.formatTime(this.player.currentTime);
                 this.url.searchParams.set('time', (formattedTime));
                 history.replaceState(null, '', this.url);
-            }, 100);
+            }, 500);*/
             await this.player.play();
         } catch (error) {
             console.error('Error playing audio:', error);
